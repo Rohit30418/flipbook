@@ -584,294 +584,38 @@
     }
 
     /* Dedicated mobile viewer.
-       Desktop continues to use #book + Turn.js unchanged. */
+       Desktop #book stays unchanged; mobile gets its own Turn.js instance. */
     .mobile-stage {
       display: none;
       position: relative;
       flex: 0 0 auto;
-      align-items: center;
-      justify-content: center;
+      touch-action: none;
+      -ms-touch-action: none;
     }
 
-    .mobile-page-wrap {
+    .mobile-book-wrap {
       position: absolute;
       top: 0;
       left: 0;
       transform-origin: top left;
-      transform-style: preserve-3d;
-      perspective: 1600px;
-      -webkit-perspective: 1600px;
       will-change: transform;
     }
 
-    .mobile-under-card,
-    .mobile-page-card,
-    .mobile-turn-sheet {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-    }
-
-    .mobile-under-card,
-    .mobile-page-card {
-      overflow: hidden;
-      background: #fff;
-      box-shadow: var(--shadow);
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    .mobile-under-card {
-      z-index: 1;
-      opacity: 0;
-      transform: scale(.992);
-      transition: opacity .12s ease, transform .24s ease;
-    }
-
-    .mobile-under-card.is-visible {
-      opacity: 1;
-      transform: scale(1);
-    }
-
-    .mobile-page-card {
-      z-index: 2;
-      transition: opacity .08s linear;
-    }
-
-    .mobile-page-card.is-turn-source-hidden {
-      opacity: 0;
-    }
-
-    .mobile-turn-sheet {
-      z-index: 5;
-      display: none;
-      transform-style: preserve-3d;
-      -webkit-transform-style: preserve-3d;
-      will-change: transform;
-      pointer-events: none;
-    }
-
-    .mobile-turn-sheet.is-active {
-      display: block;
-    }
-
-    .mobile-turn-sheet.turn-forward {
-      transform-origin: left center;
-    }
-
-    .mobile-turn-sheet.turn-backward {
-      transform-origin: right center;
-    }
-
-    .mobile-turn-face {
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-      background: #fff;
-      backface-visibility: hidden;
-      -webkit-backface-visibility: hidden;
-      box-shadow: 0 16px 46px rgba(0,0,0,.20);
-    }
-
-    .mobile-turn-front {
-      transform: rotateY(0deg);
-    }
-
-    .mobile-turn-back {
-      transform: rotateY(180deg);
-      background:
-        linear-gradient(90deg, rgba(15,23,42,.045), transparent 16%, transparent 84%, rgba(15,23,42,.05)),
-        #fff;
-    }
-
-    .mobile-turn-face img,
-    .mobile-under-img {
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      background: #fff;
-      pointer-events: none;
-      -webkit-user-drag: none;
-    }
-
-    .mobile-turn-back img {
-      filter: brightness(.985) saturate(.96);
-    }
-
-    .mobile-turn-sheet::before,
-    .mobile-turn-sheet::after {
-      content: "";
-      position: absolute;
-      z-index: 8;
-      top: 0;
-      bottom: 0;
-      width: 22%;
-      pointer-events: none;
-      opacity: var(--mobile-curl-shadow, 0);
-      transition: opacity .06s linear;
-    }
-
-    .mobile-turn-sheet.turn-forward::before {
-      left: 0;
-      background: linear-gradient(
-        to right,
-        rgba(15,23,42,.42),
-        rgba(15,23,42,.13) 38%,
-        transparent
-      );
-    }
-
-    .mobile-turn-sheet.turn-forward::after {
-      right: 0;
-      background: linear-gradient(
-        to left,
-        rgba(255,255,255,.38),
-        rgba(255,255,255,.08) 48%,
-        transparent
-      );
-    }
-
-    .mobile-turn-sheet.turn-backward::before {
-      right: 0;
-      background: linear-gradient(
-        to left,
-        rgba(15,23,42,.42),
-        rgba(15,23,42,.13) 38%,
-        transparent
-      );
-    }
-
-    .mobile-turn-sheet.turn-backward::after {
-      left: 0;
-      background: linear-gradient(
-        to right,
-        rgba(255,255,255,.38),
-        rgba(255,255,255,.08) 48%,
-        transparent
-      );
-    }
-
-    .mobile-under-card::after {
-      content: "";
-      position: absolute;
-      z-index: 4;
-      inset: 0;
-      pointer-events: none;
-      opacity: var(--mobile-under-shadow, 0);
-      background: linear-gradient(
-        90deg,
-        rgba(15,23,42,.22),
-        rgba(15,23,42,.06) 16%,
-        transparent 42%,
-        transparent
-      );
-      transition: opacity .06s linear;
-    }
-
-    .mobile-under-card.turn-backward::after {
-      background: linear-gradient(
-        270deg,
-        rgba(15,23,42,.22),
-        rgba(15,23,42,.06) 16%,
-        transparent 42%,
-        transparent
-      );
-    }
-
-    .mobile-page-img {
+    #mobileBook {
       position: relative;
-      z-index: 2;
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      background: #fff;
-      pointer-events: none;
-      -webkit-user-drag: none;
-      opacity: 0;
-      transition: opacity 0.12s ease;
+      filter: drop-shadow(var(--shadow));
+      cursor: default;
     }
 
-    .mobile-page-card.is-rendered .mobile-page-img {
-      opacity: 1;
+    #mobileBook,
+    #mobileBook * {
+      /* Turn.js draws the fold, but our mobile gesture layer owns touch input. */
+      pointer-events: none !important;
     }
 
-    .mobile-page-status {
-      position: absolute;
-      z-index: 3;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      padding: 24px;
-      color: #475569;
-      background: linear-gradient(135deg, #fff, #f8fafc);
-      text-align: center;
-      font-size: 13px;
-      font-weight: 850;
-    }
-
-    .mobile-page-card.is-rendered .mobile-page-status {
-      display: none;
-    }
-
-    .mobile-under-status {
-      position: absolute;
-      z-index: 3;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      padding: 24px;
-      color: #475569;
-      background: linear-gradient(135deg, #fff, #f8fafc);
-      text-align: center;
-      font-size: 13px;
-      font-weight: 850;
-    }
-
-    .mobile-under-card.is-rendered .mobile-under-status {
-      display: none;
-    }
-
-    .mobile-under-status span {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: #f1f5f9;
-      border: 1px solid #e2e8f0;
-    }
-
-    .mobile-under-card.is-loading .mobile-under-status span::before {
-      content: "";
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      border: 2px solid #cbd5e1;
-      border-top-color: var(--brand);
-      animation: spin .8s linear infinite;
-    }
-
-    .mobile-page-status span {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: #f1f5f9;
-      border: 1px solid #e2e8f0;
-    }
-
-    .mobile-page-card.is-loading .mobile-page-status span::before {
-      content: "";
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      border: 2px solid #cbd5e1;
-      border-top-color: var(--brand);
-      animation: spin 0.8s linear infinite;
+    #mobileBook .page,
+    #mobileBook .turn-page {
+      background: #fff !important;
     }
 
     @media (max-width: 760px) {
@@ -881,19 +625,13 @@
 
       .mobile-stage {
         display: block;
-        touch-action: none;
-        -ms-touch-action: none;
       }
 
       .viewer:not(.is-zoomed) {
         overflow: hidden;
       }
 
-      .viewer.is-zoomed .mobile-stage,
-      .viewer.is-zoomed .mobile-page-wrap,
-      .viewer.is-zoomed .mobile-page-card,
-      .viewer.is-zoomed .mobile-under-card,
-      .viewer.is-zoomed .mobile-turn-sheet {
+      .viewer.is-zoomed .mobile-stage {
         touch-action: pan-x pan-y;
         -ms-touch-action: pan-x pan-y;
       }
@@ -949,29 +687,8 @@
       </div>
 
       <div class="mobile-stage" id="mobileStage" aria-hidden="true">
-        <div class="mobile-page-wrap" id="mobilePageWrap">
-          <div class="mobile-under-card" id="mobileUnderCard" aria-hidden="true">
-            <img class="mobile-under-img" id="mobileUnderImg" alt="" draggable="false" />
-            <div class="mobile-under-status" id="mobileUnderStatus">
-              <span id="mobileUnderStatusText">Loading page...</span>
-            </div>
-          </div>
-
-          <div class="mobile-page-card" id="mobilePageCard">
-            <img class="mobile-page-img" id="mobilePageImg" alt="" draggable="false" />
-            <div class="mobile-page-status" id="mobilePageStatus">
-              <span id="mobilePageStatusText">Loading page...</span>
-            </div>
-          </div>
-
-          <div class="mobile-turn-sheet" id="mobileTurnSheet" aria-hidden="true">
-            <div class="mobile-turn-face mobile-turn-front">
-              <img id="mobileTurnFrontImg" alt="" draggable="false" />
-            </div>
-            <div class="mobile-turn-face mobile-turn-back">
-              <img id="mobileTurnBackImg" alt="" draggable="false" />
-            </div>
-          </div>
+        <div class="mobile-book-wrap" id="mobileBookWrap">
+          <div id="mobileBook"></div>
         </div>
       </div>
     </main>
@@ -1090,18 +807,8 @@
       bookStage: document.getElementById("bookStage"),
       bookWrap: document.getElementById("bookWrap"),
       mobileStage: document.getElementById("mobileStage"),
-      mobilePageWrap: document.getElementById("mobilePageWrap"),
-      mobileUnderCard: document.getElementById("mobileUnderCard"),
-      mobileUnderImg: document.getElementById("mobileUnderImg"),
-      mobileUnderStatus: document.getElementById("mobileUnderStatus"),
-      mobileUnderStatusText: document.getElementById("mobileUnderStatusText"),
-      mobilePageCard: document.getElementById("mobilePageCard"),
-      mobilePageImg: document.getElementById("mobilePageImg"),
-      mobilePageStatus: document.getElementById("mobilePageStatus"),
-      mobilePageStatusText: document.getElementById("mobilePageStatusText"),
-      mobileTurnSheet: document.getElementById("mobileTurnSheet"),
-      mobileTurnFrontImg: document.getElementById("mobileTurnFrontImg"),
-      mobileTurnBackImg: document.getElementById("mobileTurnBackImg"),
+      mobileBookWrap: document.getElementById("mobileBookWrap"),
+      mobileBook: document.getElementById("mobileBook"),
       viewer: document.getElementById("viewer"),
       loader: document.getElementById("loader"),
       loaderTitle: document.getElementById("loaderTitle"),
@@ -1157,21 +864,18 @@
       pendingForwardLock: false,
       mobile: {
         active: false,
+        turnReady: false,
         baseWidth: 0,
         baseHeight: 0,
         touchActive: false,
         dragging: false,
+        peelCorner: "",
         startX: 0,
         startY: 0,
         lastX: 0,
         lastY: 0,
         dx: 0,
-        dy: 0,
-        turning: false,
-        direction: 0,
-        targetIndex: -1,
-        progress: 0,
-        animationTimer: null
+        dy: 0
       },
       resizeTimer: null,
       rangeTimer: null,
@@ -1697,18 +1401,10 @@
         clearPageImage(index);
       }
 
-      if (els.mobilePageImg) {
-        els.mobilePageImg.removeAttribute("src");
-        els.mobilePageCard.classList.remove("is-rendered", "is-loading", "is-turn-source-hidden");
-        els.mobilePageStatusText.textContent = "Loading page...";
-
-        els.mobileUnderImg.removeAttribute("src");
-        els.mobileUnderCard.classList.remove("is-visible", "is-rendered", "is-loading");
-        els.mobileUnderStatusText.textContent = "Loading page...";
-
-        els.mobileTurnFrontImg.removeAttribute("src");
-        els.mobileTurnBackImg.removeAttribute("src");
-        els.mobileTurnSheet.classList.remove("is-active", "turn-forward", "turn-backward");
+      if (state.mobile.turnReady) {
+        for (let index = 0; index < state.totalPages; index++) {
+          clearPageImage(index);
+        }
       }
     }
 
@@ -1799,9 +1495,11 @@
     }
 
     function isCurrentSpreadReady() {
-      const visible = state.visibleIndices && state.visibleIndices.length
-        ? state.visibleIndices
-        : getVisibleIndices();
+      const visible = state.mobile.active && state.mobile.turnReady
+        ? currentMobileTurnView()
+        : (state.visibleIndices && state.visibleIndices.length
+          ? state.visibleIndices
+          : getVisibleIndices());
 
       return arePagesRenderReady(visible);
     }
@@ -2016,57 +1714,71 @@
       return page;
     }
 
+    function isMobileBookActuallyAnimating() {
+      if (!state.mobile.turnReady) return false;
+
+      try {
+        return !!window.jQuery(els.mobileBook).turn("animating");
+      } catch (_) {
+        return false;
+      }
+    }
+
     function destroyMobileViewer() {
-      window.clearTimeout(state.mobile.animationTimer);
+      if (state.mobile.turnReady) {
+        try {
+          window.jQuery(els.mobileBook).turn("destroy");
+        } catch (_) {}
+      }
 
       state.mobile.active = false;
+      state.mobile.turnReady = false;
       state.mobile.touchActive = false;
       state.mobile.dragging = false;
-      state.mobile.turning = false;
-      state.mobile.direction = 0;
-      state.mobile.targetIndex = -1;
-      state.mobile.progress = 0;
+      state.mobile.peelCorner = "";
       state.mobile.dx = 0;
       state.mobile.dy = 0;
-      state.mobile.animationTimer = null;
 
       els.mobileStage.setAttribute("aria-hidden", "true");
       els.mobileStage.removeAttribute("style");
-      els.mobilePageWrap.removeAttribute("style");
+      els.mobileBookWrap.removeAttribute("style");
+      els.mobileBook.innerHTML = "";
+      els.mobileBook.removeAttribute("style");
+    }
 
-      els.mobilePageCard.removeAttribute("style");
-      els.mobilePageCard.classList.remove(
-        "is-rendered",
-        "is-loading",
-        "is-turn-source-hidden"
-      );
+    function currentMobileTurnView() {
+      if (!state.mobile.turnReady) return state.visibleIndices.slice();
 
-      els.mobileUnderCard.removeAttribute("style");
-      els.mobileUnderCard.classList.remove(
-        "is-visible",
-        "is-rendered",
-        "is-loading",
-        "turn-forward",
-        "turn-backward"
-      );
-      els.mobileUnderCard.setAttribute("aria-hidden", "true");
+      try {
+        const $book = window.jQuery(els.mobileBook);
+        return normalizeView($book.turn("view"), $book.turn("page"));
+      } catch (_) {
+        return state.visibleIndices.slice();
+      }
+    }
 
-      els.mobileTurnSheet.removeAttribute("style");
-      els.mobileTurnSheet.classList.remove(
-        "is-active",
-        "turn-forward",
-        "turn-backward"
-      );
-      els.mobileTurnSheet.setAttribute("aria-hidden", "true");
+    function syncFromMobileTurn(page, view, renderNow) {
+      const safePage = clamp(Number(page || 1), 1, state.totalPages);
+      const visible = normalizeView(view, safePage);
 
-      els.mobilePageImg.removeAttribute("src");
-      els.mobilePageImg.alt = "";
-      els.mobileUnderImg.removeAttribute("src");
-      els.mobileUnderImg.alt = "";
-      els.mobileTurnFrontImg.removeAttribute("src");
-      els.mobileTurnBackImg.removeAttribute("src");
-      els.mobilePageStatusText.textContent = "Loading page...";
-      els.mobileUnderStatusText.textContent = "Loading page...";
+      state.currentPage = safePage - 1;
+      state.visibleIndices = visible.length ? visible : [safePage - 1];
+      syncShareUrl(safePage);
+
+      els.pageRange.value = String(state.currentPage);
+      els.pageText.textContent =
+        (state.currentPage + 1) + " / " + state.totalPages;
+
+      refreshNavigationAvailability();
+
+      if (renderNow && state.isReady) {
+        renderMobileCurrentPage(false)
+          .then(() => {
+            refreshNavigationAvailability();
+            schedulePrefetch();
+          })
+          .catch(() => {});
+      }
     }
 
     function layoutMobileViewer() {
@@ -2081,67 +1793,29 @@
 
       els.mobileStage.style.width = scaledWidth + "px";
       els.mobileStage.style.height = scaledHeight + "px";
-      els.mobilePageWrap.style.width = size.pageWidth + "px";
-      els.mobilePageWrap.style.height = size.pageHeight + "px";
-      els.mobilePageWrap.style.transform = "scale(" + state.zoom + ")";
-      els.mobilePageCard.style.width = size.pageWidth + "px";
-      els.mobilePageCard.style.height = size.pageHeight + "px";
-      els.mobileUnderCard.style.width = size.pageWidth + "px";
-      els.mobileUnderCard.style.height = size.pageHeight + "px";
-      els.mobileTurnSheet.style.width = size.pageWidth + "px";
-      els.mobileTurnSheet.style.height = size.pageHeight + "px";
-    }
+      els.mobileBookWrap.style.width = size.pageWidth + "px";
+      els.mobileBookWrap.style.height = size.pageHeight + "px";
+      els.mobileBookWrap.style.transform = "scale(" + state.zoom + ")";
 
-    function syncMobilePageMeta(index) {
-      const safe = clamp(index, 0, Math.max(0, state.totalPages - 1));
-
-      state.currentPage = safe;
-      state.visibleIndices = [safe];
-      syncShareUrl(safe + 1);
-
-      els.pageRange.value = String(safe);
-      els.pageText.textContent = (safe + 1) + " / " + state.totalPages;
-      els.mobilePageImg.alt = "PDF page " + (safe + 1);
-    }
-
-    function setMobileLoadingVisual(index, keepExisting) {
-      if (!keepExisting) {
-        els.mobilePageImg.removeAttribute("src");
-        els.mobilePageCard.classList.remove("is-rendered");
+      if (state.mobile.turnReady) {
+        try {
+          window.jQuery(els.mobileBook).turn("size", size.pageWidth, size.pageHeight);
+        } catch (_) {}
+      } else {
+        els.mobileBook.style.width = size.pageWidth + "px";
+        els.mobileBook.style.height = size.pageHeight + "px";
       }
-
-      els.mobilePageCard.classList.add("is-loading");
-      els.mobilePageStatusText.textContent = "Loading page " + (index + 1);
     }
 
-    function setMobileRenderedVisual(index, url) {
-      if (!state.mobile.active || state.currentPage !== index) return;
-
-      els.mobilePageImg.src = url;
-      els.mobilePageCard.classList.remove("is-loading");
-      els.mobilePageCard.classList.add("is-rendered");
-      els.mobilePageStatusText.textContent = "Page " + (index + 1);
-    }
-
-    async function renderMobileCurrentPage(priority = false, keepExisting = false) {
+    async function renderMobileCurrentPage(priority = false) {
       if (!state.mobile.active || !state.pdfDoc) return null;
 
       const index = state.currentPage;
-      const cached = state.pageCache.get(index);
-
-      if (cached && cached.key === getRenderKey()) {
-        setMobileRenderedVisual(index, cached.url);
-        refreshNavigationAvailability();
-        return cached.url;
-      }
-
-      setMobileLoadingVisual(index, keepExisting);
 
       try {
         const url = await ensurePageRendered(index, { priority: !!priority });
 
-        if (state.mobile.active && state.currentPage === index && url) {
-          setMobileRenderedVisual(index, url);
+        if (state.mobile.active && state.currentPage === index) {
           state.forwardLocked = false;
           state.pendingForwardLock = false;
           refreshNavigationAvailability();
@@ -2150,304 +1824,101 @@
 
         return url;
       } catch (error) {
-        if (state.mobile.active && state.currentPage === index) {
-          els.mobilePageCard.classList.remove("is-loading", "is-rendered");
-          els.mobilePageStatusText.textContent = "Page failed to load";
-        }
+        console.error(error);
         throw error;
       }
     }
 
-    function getMobileCachedUrl(index) {
-      const cached = state.pageCache.get(index);
-      return cached && cached.key === getRenderKey() ? cached.url : "";
-    }
-
-    function setMobileUnderPage(index, url) {
-      els.mobileUnderCard.classList.add("is-visible");
-      els.mobileUnderCard.classList.toggle("turn-forward", state.mobile.direction > 0);
-      els.mobileUnderCard.classList.toggle("turn-backward", state.mobile.direction < 0);
-      els.mobileUnderImg.alt = "PDF page " + (index + 1);
-
-      if (url) {
-        els.mobileUnderImg.src = url;
-        els.mobileUnderCard.classList.remove("is-loading");
-        els.mobileUnderCard.classList.add("is-rendered");
-        els.mobileUnderStatusText.textContent = "Page " + (index + 1);
-      } else {
-        els.mobileUnderImg.removeAttribute("src");
-        els.mobileUnderCard.classList.remove("is-rendered");
-        els.mobileUnderCard.classList.add("is-loading");
-        els.mobileUnderStatusText.textContent = "Loading page " + (index + 1);
-      }
-    }
-
-    function resetMobileTurnLayers() {
-      window.clearTimeout(state.mobile.animationTimer);
-      state.mobile.animationTimer = null;
-
-      els.mobileTurnSheet.classList.remove("is-active", "turn-forward", "turn-backward");
-      els.mobileTurnSheet.setAttribute("aria-hidden", "true");
-      els.mobileTurnSheet.removeAttribute("style");
-
-      els.mobileUnderCard.classList.remove(
-        "is-visible",
-        "is-rendered",
-        "is-loading",
-        "turn-forward",
-        "turn-backward"
-      );
-      els.mobileUnderCard.setAttribute("aria-hidden", "true");
-      els.mobileUnderCard.removeAttribute("style");
-      els.mobileUnderImg.removeAttribute("src");
-
-      els.mobilePageCard.classList.remove("is-turn-source-hidden");
-      els.mobilePageCard.style.opacity = "1";
-
-      els.mobileTurnFrontImg.removeAttribute("src");
-      els.mobileTurnBackImg.removeAttribute("src");
-
-      state.mobile.turning = false;
-      state.mobile.direction = 0;
-      state.mobile.targetIndex = -1;
-      state.mobile.progress = 0;
-      state.mobile.dragging = false;
-    }
-
-    function prepareMobilePageTurn(targetIndex) {
-      if (!state.mobile.active || !state.isReady || state.mobile.turning) return false;
-
-      const target = clamp(targetIndex, 0, state.totalPages - 1);
-      const current = state.currentPage;
-
-      if (target === current) return false;
-
-      const direction = target > current ? 1 : -1;
-
-      if (direction > 0 && state.forwardLocked) {
-        showSpreadLoadingStatus();
-        refreshNavigationAvailability();
-        return false;
-      }
-
-      state.mobile.turning = true;
-      state.mobile.direction = direction;
-      state.mobile.targetIndex = target;
-      state.mobile.progress = 0;
-
-      const currentSrc = els.mobilePageImg.getAttribute("src") || getMobileCachedUrl(current);
-      const targetSrc = getMobileCachedUrl(target);
-
-      if (currentSrc) {
-        els.mobileTurnFrontImg.src = currentSrc;
-      } else {
-        els.mobileTurnFrontImg.removeAttribute("src");
-      }
-
-      if (targetSrc) {
-        els.mobileTurnBackImg.src = targetSrc;
-      } else {
-        els.mobileTurnBackImg.removeAttribute("src");
-      }
-
-      setMobileUnderPage(target, targetSrc);
-
-      els.mobileUnderCard.setAttribute("aria-hidden", "false");
-      els.mobileTurnSheet.setAttribute("aria-hidden", "false");
-      els.mobileTurnSheet.classList.add("is-active");
-      els.mobileTurnSheet.classList.toggle("turn-forward", direction > 0);
-      els.mobileTurnSheet.classList.toggle("turn-backward", direction < 0);
-      els.mobileTurnSheet.style.transition = "none";
-      els.mobileTurnSheet.style.transform =
-        "perspective(1600px) rotateY(0deg) translate3d(0,0,1px)";
-      els.mobileTurnSheet.style.setProperty("--mobile-curl-shadow", "0");
-      els.mobileUnderCard.style.setProperty("--mobile-under-shadow", "0");
-
-      // The turn sheet is a visual clone of the current page. Hide the original
-      // underneath it so the target page can be revealed naturally as it rotates.
-      els.mobilePageCard.classList.add("is-turn-source-hidden");
-
-      // Start rendering the destination immediately, but never wait for it.
-      if (!targetSrc) {
-        ensurePageRendered(target, { priority: false })
-          .then((url) => {
-            if (!url || !state.mobile.active) return;
-            if (!state.mobile.turning || state.mobile.targetIndex !== target) return;
-
-            setMobileUnderPage(target, url);
-            els.mobileTurnBackImg.src = url;
-          })
-          .catch(() => {});
-      }
-
-      updateMobileTurnProgress(0);
-      return true;
-    }
-
-    function updateMobileTurnProgress(progress) {
-      if (!state.mobile.turning) return;
-
-      const p = clamp(progress, 0, 1);
-      state.mobile.progress = p;
-
-      // Ease the sheet slightly so the first half feels like paper resisting
-      // the finger and the second half falls over naturally.
-      const eased = p < 0.5
-        ? 2 * p * p
-        : 1 - Math.pow(-2 * p + 2, 2) / 2;
-
-      const direction = state.mobile.direction;
-      const angle = (direction > 0 ? -180 : 180) * eased;
-      const bow = Math.sin(Math.PI * p);
-      const translateX = (direction > 0 ? -1 : 1) * bow * 10;
-      const translateZ = bow * 18;
-      const skew = (direction > 0 ? -1 : 1) * bow * 1.8;
-      const curlShadow = Math.min(.82, .08 + bow * .74);
-      const underShadow = Math.min(.46, bow * .42);
-
-      els.mobileTurnSheet.style.transform =
-        "perspective(1600px) translate3d(" + translateX + "px,0," +
-        translateZ + "px) rotateY(" + angle + "deg) skewY(" + skew + "deg)";
-      els.mobileTurnSheet.style.setProperty(
-        "--mobile-curl-shadow",
-        String(curlShadow)
-      );
-      els.mobileUnderCard.style.setProperty(
-        "--mobile-under-shadow",
-        String(underShadow)
-      );
-    }
-
-    function cancelMobilePageTurn() {
-      if (!state.mobile.turning) {
-        resetMobileTurnLayers();
-        return;
-      }
-
-      const sheet = els.mobileTurnSheet;
-      sheet.style.transition =
-        "transform .28s cubic-bezier(.22,.75,.25,1)";
-      sheet.style.setProperty("--mobile-curl-shadow", "0");
-      els.mobileUnderCard.style.setProperty("--mobile-under-shadow", "0");
-
-      window.requestAnimationFrame(() => {
-        sheet.style.transform =
-          "perspective(1600px) rotateY(0deg) translate3d(0,0,1px)";
-      });
-
-      state.mobile.animationTimer = window.setTimeout(() => {
-        resetMobileTurnLayers();
-      }, 300);
-    }
-
-    function finishMobilePageTurn() {
-      if (!state.mobile.turning) return false;
-
-      const target = state.mobile.targetIndex;
-      const direction = state.mobile.direction;
-      const sheet = els.mobileTurnSheet;
-      const finalAngle = direction > 0 ? -180 : 180;
-
-      playPageFlipSound();
-
-      sheet.style.transition =
-        "transform .34s cubic-bezier(.18,.72,.22,1)";
-      sheet.style.setProperty("--mobile-curl-shadow", ".08");
-      els.mobileUnderCard.style.setProperty("--mobile-under-shadow", "0");
-
-      window.requestAnimationFrame(() => {
-        sheet.style.transform =
-          "perspective(1600px) translate3d(0,0,2px) rotateY(" +
-          finalAngle + "deg)";
-      });
-
-      state.mobile.animationTimer = window.setTimeout(() => {
-        if (!state.mobile.active) return;
-
-        syncMobilePageMeta(target);
-
-        const url = getMobileCachedUrl(target);
-        const ready = !!url;
-
-        state.forwardLocked = !ready;
-        state.pendingForwardLock = false;
-
-        if (ready) {
-          setMobileRenderedVisual(target, url);
-          state.forwardLocked = false;
-        } else {
-          setMobileLoadingVisual(target, false);
-        }
-
-        resetMobileTurnLayers();
-        refreshNavigationAvailability();
-
-        renderMobileCurrentPage(false, false).catch((error) => {
-          console.error(error);
-        });
-      }, 350);
-
-      return true;
-    }
-
-    function mobileGoToPage(index) {
-      if (!state.mobile.active || !state.isReady || state.mobile.turning) return false;
-
-      const safe = clamp(index, 0, state.totalPages - 1);
-      if (safe === state.currentPage) return false;
-
-      if (!prepareMobilePageTurn(safe)) return false;
-
-      // Toolbar/page-slider navigation uses the same physical sheet animation.
-      updateMobileTurnProgress(0.08);
-      window.requestAnimationFrame(() => {
-        if (!state.mobile.turning) return;
-        updateMobileTurnProgress(0.28);
-        finishMobilePageTurn();
-      });
-
-      return true;
-    }
-
-    function mobileNextPage() {
-      if (!state.mobile.active || !state.isReady || state.mobile.turning) return false;
-
-      if (state.forwardLocked) {
-        showSpreadLoadingStatus();
-        refreshNavigationAvailability();
-        return false;
-      }
-
-      if (state.currentPage >= state.totalPages - 1) return false;
-
-      return mobileGoToPage(state.currentPage + 1);
-    }
-
-    function mobilePrevPage() {
-      if (!state.mobile.active || !state.isReady || state.mobile.turning) return false;
-      if (state.currentPage <= 0) return false;
-
-      return mobileGoToPage(state.currentPage - 1);
-    }
-
     function buildMobileViewer(startPage = 0) {
       destroyFlipbook();
+      destroyMobileViewer();
+
+      const safeStart = clamp(startPage, 0, Math.max(0, state.totalPages - 1));
+      const size = getBookSize();
+      const fragment = document.createDocumentFragment();
 
       state.mobile.active = true;
+      state.mobile.turnReady = false;
       state.forwardLocked = false;
       state.pendingForwardLock = false;
       state.zoom = 1;
 
-      const safe = clamp(startPage, 0, Math.max(0, state.totalPages - 1));
+      for (let index = 0; index < state.totalPages; index++) {
+        fragment.appendChild(createPlaceholderPage(index));
+      }
+
+      els.mobileBook.appendChild(fragment);
+      els.mobileBook.style.width = size.pageWidth + "px";
+      els.mobileBook.style.height = size.pageHeight + "px";
 
       els.bookStage.setAttribute("aria-hidden", "true");
       els.mobileStage.setAttribute("aria-hidden", "false");
       els.viewer.classList.remove("is-zoomed", "is-panning");
 
-      syncMobilePageMeta(safe);
+      state.mobile.baseWidth = size.pageWidth;
+      state.mobile.baseHeight = size.pageHeight;
+
+      const $book = window.jQuery(els.mobileBook);
+
+      $book.turn({
+        width: size.pageWidth,
+        height: size.pageHeight,
+        display: "single",
+        page: safeStart + 1,
+        pages: state.totalPages,
+        autoCenter: true,
+        acceleration: true,
+        gradients: true,
+        elevation: CONFIG.turnElevation,
+        duration: CONFIG.turnDuration,
+        turnCorners: "tl,tr",
+
+        when: {
+          turning: function (event, page, view) {
+            state.isTurning = true;
+            playPageFlipSound();
+
+            const destinationPage = clamp(Number(page || 1), 1, state.totalPages);
+            const movingForward = destinationPage - 1 > state.currentPage;
+            const destinationVisible = normalizeView(view, destinationPage);
+
+            state.pendingForwardLock =
+              movingForward && !arePagesRenderReady(destinationVisible);
+
+            syncFromMobileTurn(destinationPage, view, false);
+
+            renderIndices(destinationVisible, false)
+              .then(refreshNavigationAvailability)
+              .catch(() => refreshNavigationAvailability());
+          },
+
+          turned: function (event, page, view) {
+            state.isTurning = false;
+
+            const landedPage = clamp(Number(page || 1), 1, state.totalPages);
+            const landedVisible = normalizeView(view, landedPage);
+
+            state.forwardLocked =
+              state.pendingForwardLock && !arePagesRenderReady(landedVisible);
+            state.pendingForwardLock = false;
+
+            syncFromMobileTurn(landedPage, view, true);
+            refreshNavigationAvailability();
+          },
+
+          end: function () {
+            state.isTurning = false;
+            refreshNavigationAvailability();
+          }
+        }
+      });
+
+      state.mobile.turnReady = true;
       layoutMobileViewer();
-      resetMobileTurnLayers();
-      setMobileLoadingVisual(safe, false);
+
+      const currentPage = Number($book.turn("page")) || (safeStart + 1);
+      const currentView = $book.turn("view");
+      syncFromMobileTurn(currentPage, currentView, false);
       syncZoomControls();
     }
 
@@ -2456,6 +1927,7 @@
 
       const viewer = els.viewer;
       const wasReadMode = viewer.classList.contains("is-zoomed");
+
       const oldScrollWidth = Math.max(viewer.scrollWidth, 1);
       const oldScrollHeight = Math.max(viewer.scrollHeight, 1);
       const centerXRatio = clamp(
@@ -2504,18 +1976,88 @@
       window.clearTimeout(state.zoomRenderTimer);
       state.zoomRenderTimer = window.setTimeout(() => {
         if (!state.isReady || !state.mobile.active) return;
-        renderMobileCurrentPage(false, true).catch(() => {});
+        renderMobileCurrentPage(false).catch(() => {});
       }, 180);
     }
 
+    function mobileGoToPage(index) {
+      if (
+        !state.mobile.active ||
+        !state.mobile.turnReady ||
+        !state.isReady ||
+        isMobileBookActuallyAnimating()
+      ) {
+        return false;
+      }
+
+      const safe = clamp(index, 0, state.totalPages - 1);
+
+      if (safe === state.currentPage) return false;
+
+      if (safe > state.currentPage && state.forwardLocked) {
+        showSpreadLoadingStatus();
+        refreshNavigationAvailability();
+        return false;
+      }
+
+      // Render destination in parallel; Turn.js can fold into its placeholder immediately.
+      renderIndices([safe], false).catch(() => {});
+
+      try {
+        window.jQuery(els.mobileBook).turn("page", safe + 1);
+        return true;
+      } catch (error) {
+        console.warn("Mobile page turn failed:", error);
+        return false;
+      }
+    }
+
+    function mobileNextPage() {
+      if (!state.mobile.active || !state.isReady) return false;
+
+      if (state.forwardLocked) {
+        showSpreadLoadingStatus();
+        refreshNavigationAvailability();
+        return false;
+      }
+
+      if (state.currentPage >= state.totalPages - 1) return false;
+      return mobileGoToPage(state.currentPage + 1);
+    }
+
+    function mobilePrevPage() {
+      if (!state.mobile.active || !state.isReady) return false;
+      if (state.currentPage <= 0) return false;
+      return mobileGoToPage(state.currentPage - 1);
+    }
+
+    function clearMobilePeel() {
+      if (!state.mobile.turnReady) return;
+
+      try {
+        window.jQuery(els.mobileBook).turn("peel", false);
+      } catch (_) {}
+
+      state.mobile.peelCorner = "";
+    }
+
     function mobileTouchStart(event) {
-      if (!state.mobile.active || state.zoom > 1.001 || state.mobile.turning) return;
+      if (
+        !state.mobile.active ||
+        !state.mobile.turnReady ||
+        state.zoom > 1.001 ||
+        isMobileBookActuallyAnimating()
+      ) {
+        return;
+      }
+
       if (!event.touches || event.touches.length !== 1) return;
 
       const touch = event.touches[0];
 
       state.mobile.touchActive = true;
       state.mobile.dragging = false;
+      state.mobile.peelCorner = "";
       state.mobile.startX = touch.clientX;
       state.mobile.startY = touch.clientY;
       state.mobile.lastX = touch.clientX;
@@ -2525,7 +2067,14 @@
     }
 
     function mobileTouchMove(event) {
-      if (!state.mobile.active || !state.mobile.touchActive || state.zoom > 1.001) return;
+      if (
+        !state.mobile.active ||
+        !state.mobile.touchActive ||
+        state.zoom > 1.001
+      ) {
+        return;
+      }
+
       if (!event.touches || event.touches.length !== 1) return;
 
       const touch = event.touches[0];
@@ -2545,51 +2094,42 @@
           return;
         }
 
-        const target = dx < 0
-          ? state.currentPage + 1
-          : state.currentPage - 1;
+        const forward = dx < 0;
 
-        if (target < 0 || target >= state.totalPages) {
-          state.mobile.touchActive = false;
-          return;
-        }
-
-        if (dx < 0 && state.forwardLocked) {
+        if (forward && state.forwardLocked) {
           state.mobile.touchActive = false;
           showSpreadLoadingStatus();
           refreshNavigationAvailability();
           return;
         }
 
-        if (!prepareMobilePageTurn(target)) {
+        if (forward && state.currentPage >= state.totalPages - 1) {
+          state.mobile.touchActive = false;
+          return;
+        }
+
+        if (!forward && state.currentPage <= 0) {
           state.mobile.touchActive = false;
           return;
         }
 
         state.mobile.dragging = true;
+        state.mobile.peelCorner = forward ? "tr" : "tl";
+
+        try {
+          window.jQuery(els.mobileBook).turn("peel", state.mobile.peelCorner);
+        } catch (_) {}
       }
 
+      // Our gesture layer owns the swipe; Turn.js only renders its real paper fold.
       event.preventDefault();
-
-      const expectedSign = state.mobile.direction > 0 ? -1 : 1;
-      const signedDistance = dx * expectedSign;
-      const width = Math.max(
-        1,
-        state.mobile.baseWidth || els.mobilePageCard.offsetWidth || 1
-      );
-
-      // If the user reverses direction, visually fold the sheet back toward zero.
-      const progress = signedDistance <= 0
-        ? 0
-        : Math.min(.98, signedDistance / (width * .82));
-
-      updateMobileTurnProgress(progress);
     }
 
     function mobileTouchEnd(event) {
       if (!state.mobile.active || !state.mobile.touchActive || state.zoom > 1.001) {
         state.mobile.touchActive = false;
-        if (state.mobile.turning) cancelMobilePageTurn();
+        state.mobile.dragging = false;
+        clearMobilePeel();
         return;
       }
 
@@ -2604,38 +2144,37 @@
       const dy = state.mobile.dy;
       const width = Math.max(
         1,
-        state.mobile.baseWidth || els.mobilePageCard.offsetWidth || 1
+        state.mobile.baseWidth || els.mobileBook.offsetWidth || 1
       );
 
-      const expectedSign = state.mobile.direction > 0 ? -1 : 1;
-      const signedDistance = dx * expectedSign;
-      const distanceThreshold = Math.min(82, Math.max(46, width * .16));
+      const threshold = Math.min(82, Math.max(46, width * 0.16));
       const horizontal = Math.abs(dx) > Math.abs(dy) * 1.08;
-      const shouldComplete =
-        state.mobile.turning &&
-        horizontal &&
-        signedDistance >= distanceThreshold &&
-        state.mobile.progress >= .10;
+      const shouldTurn = state.mobile.dragging && horizontal && Math.abs(dx) >= threshold;
+      const target = dx < 0
+        ? state.currentPage + 1
+        : state.currentPage - 1;
 
       state.mobile.touchActive = false;
       state.mobile.dragging = false;
 
-      if (shouldComplete) {
-        finishMobilePageTurn();
+      if (
+        shouldTurn &&
+        target >= 0 &&
+        target < state.totalPages &&
+        !(target > state.currentPage && state.forwardLocked)
+      ) {
+        // Keep the peeled corner as the starting point for the real Turn.js fold.
+        mobileGoToPage(target);
+        state.mobile.peelCorner = "";
       } else {
-        cancelMobilePageTurn();
+        clearMobilePeel();
       }
     }
 
     function mobileTouchCancel() {
       state.mobile.touchActive = false;
       state.mobile.dragging = false;
-
-      if (state.mobile.turning) {
-        cancelMobilePageTurn();
-      } else {
-        resetMobileTurnLayers();
-      }
+      clearMobilePeel();
     }
 
     function buildFlipbook(startPage = 0) {
@@ -2813,7 +2352,11 @@
           buildMobileViewer(startPage);
 
           setProgress(72, "Rendering current page...");
-          await renderMobileCurrentPage(true, false);
+          await renderMobileCurrentPage(true);
+
+          const warm = getPrefetchIndices();
+          setProgress(86, "Preparing nearby pages...");
+          await renderIndices(warm.slice(0, 3), false);
 
           setProgress(100, "Ready");
           state.isReady = true;
@@ -3214,7 +2757,7 @@
 
           state.zoom = 1;
           applyMobileZoom();
-          renderMobileCurrentPage(false, true).catch(() => {});
+          renderMobileCurrentPage(false).catch(() => {});
           return;
         }
 
@@ -3252,7 +2795,7 @@
         clearCache();
 
         if (state.mobile.active) {
-          await renderMobileCurrentPage(true, false);
+          await renderMobileCurrentPage(true);
         } else {
           await renderVisiblePages();
         }
@@ -3370,7 +2913,7 @@
           if (state.mobile.active) {
             layoutMobileViewer();
             applyMobileZoom();
-            renderMobileCurrentPage(false, true).catch(() => {});
+            renderMobileCurrentPage(false).catch(() => {});
             return;
           }
 
