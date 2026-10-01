@@ -132,7 +132,9 @@
       position: absolute;
       inset: 0;
       padding: 18px 24px calc(var(--toolbar-height) + 14px);
-      overflow: auto;
+      /* Normal flip mode must keep a stable viewport. Turn.js temporarily
+         extends fold/shadow geometry outside the book during animation. */
+      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -148,6 +150,7 @@
       justify-content: flex-start;
       padding-left: 24px;
       padding-right: 24px;
+      overflow: auto;
       cursor: grab;
       touch-action: pan-x pan-y;
     }
@@ -191,7 +194,11 @@
 
     #book {
       position: relative;
-      filter: drop-shadow(var(--shadow));
+      /* A normal box-shadow stays visually stable while Turn.js animates
+         internal pages. drop-shadow() forced the whole book through a costly
+         filter/composite pass on every fold frame. */
+      filter: none;
+      box-shadow: var(--shadow);
       cursor: default;
 
       /* At normal flip mode Turn.js must own the horizontal finger gesture.
@@ -2579,6 +2586,17 @@
       }
     }
 
+    function hydrateCachedPages(indices) {
+      Array.from(new Set(indices || []))
+        .filter((index) => index >= 0 && index < state.totalPages)
+        .forEach((index) => {
+          const cached = state.pageCache.get(index);
+          if (cached && cached.key === getRenderKey() && cached.url) {
+            updatePageImage(index, cached.url);
+          }
+        });
+    }
+
     function buildFlipbook(startPage = 0) {
       destroyFlipbook();
 
@@ -2644,9 +2662,10 @@
             if (pageObject && pageObject.page) candidates.push(pageObject.page - 1);
             if (pageObject && pageObject.next) candidates.push(pageObject.next - 1);
 
-            candidates.forEach((index) => {
-              ensurePageRendered(index, { priority: false }).catch(() => {});
-            });
+            // Keep the fold animation isolated from PDF canvas/JPEG work.
+            // If a nearby page is already cached, hydrate it immediately.
+            // Otherwise rendering starts after the page has landed.
+            hydrateCachedPages(candidates);
           },
 
           turning: function (event, page, view) {
@@ -2665,10 +2684,10 @@
 
             syncFromTurn(destinationPage, view, false);
 
-            // Begin rendering destination pages in parallel with the animation.
-            renderIndices(destinationVisible, false)
-              .then(refreshNavigationAvailability)
-              .catch(() => refreshNavigationAvailability());
+            // Do not compete with the fold animation using PDF canvas rendering.
+            // Cached images are cheap to attach; uncached destination pages render
+            // immediately after Turn.js has landed on them.
+            hydrateCachedPages(destinationVisible);
           },
 
           turned: function (event, page, view) {
