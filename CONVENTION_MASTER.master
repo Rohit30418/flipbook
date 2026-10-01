@@ -1,0 +1,1480 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeFile="CONVENTION_MASTER.master.cs" Inherits="CONVENTION_MASTER" %>
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="no-cache" />
+    <meta http-equiv="Expires" content="-1" />
+    <meta http-equiv="Cache-Control" content="no-cache" />
+    <meta name="description" content="" />
+    <meta name="authur" content="" />
+    <meta name="robots" content="nofollow" />
+    <title>FHRAI-THE FEDERATION OF HOTEL & RESTAURANT
+ASSOCIATIONS OF INDIA</title>
+    <link type="text/css" rel="stylesheet" href="css/style.css" />
+    <link type="text/css" rel="stylesheet" href="css/responsive.css" />
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" />
+   <%-- <link href="css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+    <link href="css/font-awesome.css" rel="stylesheet" type="text/css" />--%>
+    <link href="css/popup.css" rel="stylesheet" />
+    <script src="js/jquery-2.2.1.min.js"></script>
+    <%--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />--%>
+    <%--<link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        integrity="sha512-3f8MuNFzM6o51HixctcZ1ThqFzFz9QDPzI7Tct8j0nmC95zLUNohspQPAeOBNlaU4QjWmNaa41Yg+pZc6M4C9g=="
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer" />--%>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+
+
+    <style>
+        .member_ul li {
+            padding: 0.6% 1%;
+        }
+        .login_register {
+            width: 120px; 
+            display:flex; 
+            justify-content: end; 
+            width: 100% !important;
+            max-width: 100% !important; 
+            gap: 10px;
+            margin-left: 40% !important;
+            
+        }
+
+        .login_register:hover {
+            cursor: pointer;
+        }
+         @media (max-width: 320px) {
+             .login_register {
+                 flex-direction: column;
+    gap: 0px;
+             }
+         }
+
+        .member_select_name {
+            width: 26.8%;
+            padding: 5px 0px 5px 5px;
+        }
+
+        .member_ul {
+            width: 88%;
+        }
+
+        .call_email h4 {
+            background: transparent !important;
+            color: #08503f !important;
+            font-size: 18px !important;
+        }
+
+        .call_email .header-li a:hover {
+            background-color: transparent !important;
+        }
+
+        @media (max-width: 1023px) and (min-width: 901px) {
+            .member_ul {
+                width: 85%;
+            }
+
+            .member_menu {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 1100px) and (min-width: 1024px) {
+            .member_ul {
+                width: 86%;
+            }
+
+            .member_menu {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 1200px) and (min-width: 1101px) {
+            .member_menu {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 1023px) and (min-width: 901px) {
+            .member_ul {
+                width: 84%;
+            }
+        }
+
+        @media (max-width: 1344px) and (min-width: 1201px) {
+            .member_menu {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 1383px) and (min-width: 1345px) {
+            .member_menu {
+                width: 85%;
+            }
+        }
+
+        .modal-backdrop.in {
+            opacity: 0.3;
+            z-index: 9;
+        }
+
+
+        <style >
+        .banner-header h1 {
+            font-size: clamp(1.5rem, 5vw + 1rem, 3.8rem) !important;
+        }
+
+        .heading {
+            font-size: clamp(1.5rem, 4vw + 1rem, 2.5rem) !important;
+        }
+
+        .member_ul .dropdown-backdrop {
+            display: none !important;
+        }
+
+        .social_icon {
+            right: unset;
+            display: none
+        }
+
+
+
+        @media(max-width:991px) {
+            .banner, .banner-past-speaker {
+                height: 40vh !important;
+            }
+
+            .certificate {
+                padding-left: 0px;
+            }
+        }
+
+        /*nested dropdown*/
+        /* Position the nested dropdown */
+        .dropdown-menu .dropdown-menu {
+            left: 100%;
+            top: 0;
+            margin-left: 0.1rem;
+            border-radius: 0.25rem;
+        }
+
+
+        .navbar-nav .dropdown-menu {
+            background-color: #327e5b;
+            color: white;
+        }
+
+        .dropdown-item {
+            color: white;
+        }
+
+
+        .footer-social-icon i {
+            font-size: 25px;
+            color: #002e5d;
+        }
+
+        .header .container-fluid {
+            max-width: 1300px;
+        }
+
+        .gsc-search-button-v2 {
+            font-size: 0;
+            padding: 6px 27px;
+            width: auto;
+            vertical-align: middle;
+            border: 1px solid #666;
+            border-radius: 2px;
+            border-color: #002e5d !important;
+            background-color: #002e5d !important;
+            padding: 10px !important;
+            background-image: linear-gradient(top, #4d90fe, #4787ed);
+        }
+
+        .website_search_div {
+            box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
+        }
+
+        .benefit_heading {
+            padding: 0px;
+        }
+
+            .benefit_heading h3 {
+                font-size: 18px;
+            }
+
+        @media(max-width:768px) {
+            .logo_text {
+                display: none;
+            }
+        }
+
+        #head_main .logo_div {
+            max-width: 700px;
+            justify-content: space-between;
+        }
+
+        @media (max-width: 993px) {
+            #panel, #flip {
+                padding: 5px;
+                text-align: center;
+                background-color: white;
+                border: solid 1px #c3c3c3;
+                color: #000;
+                font-weight: 400;
+            }
+        }
+
+        @media (max-width: 993px) {
+            .header_ul li {
+                border-bottom: 1px solid #b0b0b0;
+                display: flex;
+                justify-content: flex-start;
+            }
+
+            .dropdown-menu li {
+                padding-left: 15px;
+            }
+        }
+
+        @media(max-width:768px) {
+            .certificate img {
+                max-width: 125px !important;
+            }
+        }
+
+        .condown {
+            display: none !important;
+        }
+
+        @media(max-width:1300px) {
+            .conventionUp {
+                display: none !important;
+            }
+
+            .condown {
+                display: block !important;
+            }
+        }
+
+        .website_search_div {
+            width: 30% !important
+        }
+
+        .#head_main2 {
+            position: static !important;
+        }
+
+        .heading {
+            font-size: clamp(1.5rem, 5vw + 2rem, 3.5rem) !important;
+        }
+
+        .con_bordertop {
+            border-top: none;
+        }
+
+        :root {
+            --bg: #feebd4;
+            --link: #002e5d;
+            --hover: #0074D9;
+        }
+
+        nav {
+            background: var(--bg);
+            padding: 0 1rem;
+            /*margin-top : 160px;*/
+        }
+
+        .menu {
+            max-width: 1200px;
+            margin: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            width: 100% !important;
+        }
+
+        .logo {
+            color: var(--link);
+            font-size: 1.5rem;
+            padding: 1rem 0;
+        }
+
+        .hamburger {
+            display: none;
+            font-size: 2rem;
+            color: var(--link);
+            cursor: pointer;
+        }
+
+        .menu-links {
+            display: flex;
+            list-style: none;
+            gap: 1rem;
+            font-weight: bold;
+            margin-bottom: 0px;
+            width: 100%;
+            justify-content: space-between;
+        }
+
+            .menu-links li {
+                position: relative;
+            }
+
+            .menu-links a {
+                color: var(--link);
+                text-decoration: none;
+                padding: 1rem 0.5rem;
+                display: block;
+                font-size: 18px;
+            }
+
+            .menu-links li:hover > a {
+                background: #002e5d;
+                color: white;
+            }
+
+            /* Dropdown hidden by default */
+            .menu-links li ul {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                background: var(--bg);
+                min-width: 200px;
+                list-style: none;
+                z-index: 999;
+            }
+
+                .menu-links li ul a {
+                    font-size: 16px;
+                }
+
+        /* Hover behavior for desktop */
+        @media (min-width: 769px) {
+            .menu-links li:hover > ul {
+                display: block;
+            }
+        }
+
+        .menu-links li ul li {
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Mobile Styles */
+        @media (max-width: 768px) {
+            .hamburger {
+                display: block;
+                padding: 1rem 0;
+            }
+            .menu-toggle {
+                display: block;
+                padding: 1rem 0;
+                margin-left: -13px;
+            }
+            .sidebar {
+                top: 191px !important;
+                           margin-top: -30%;
+    height: 50%;
+    width: 100% !important;
+    margin-left: 100%;
+    transition: all 0.3s;
+}
+            .member_select_name {
+                margin-left: auto;
+    width: 100px;
+    margin-right: -25px;
+            }
+            .member_select_name p {
+                width : 100%;
+            }
+            .member_profile_pic {
+                width :10%;
+            }
+
+            profile_menu_ul  {
+                margin-top: 16px;
+    margin-left: -50px;
+            }
+            .menu-links {
+                display: none;
+                flex-direction: column;
+                width: 100%;
+            }
+
+                .menu-links.show {
+                    display: flex;
+                }
+
+                .menu-links li ul {
+                    position: static;
+                }
+
+                .menu-links li.show-dropdown > ul {
+                    display: block;
+                }
+        }
+
+        .logo_div img {
+            width: 100% !important;
+        }
+
+        @media(max-width:991px) {
+            .logo_div {
+                display: none !important;
+            }
+        }
+
+
+
+        @media(min-width:992px) {
+            .mob_logo {
+                display: none;
+            }
+        }
+
+        .convention_home_main {
+            width: 100% !important;
+            max-width: 1170px !important;
+            padding-inline: 15px !important;
+        }
+
+        .member_select_name {
+            background-color: #002e5d;
+        }
+
+        .profile_menu_ul {
+            background-color: white;
+        }
+    </style>
+    <style>
+        #head_main {
+           /* position: fixed !important;*/
+            top: 0;
+            left: 0;
+            right: 0;
+              
+        }
+
+        #sidebar {
+            z-index: 1000;
+        }
+
+        .logmod__wrapper {
+            position: relative;
+            z-index: 1; /* Ensure login form appears above sidebar */
+        }
+        /* Sidebar styles */
+        :root {
+            --sidebar-width: 250px;
+            --sidebar-bg: #08503f;
+            --sidebar-color: #fff;
+            --sidebar-hover-bg: #0a6a54;
+            --sidebar-active-bg: #002e5d;
+        }
+
+        .sidebar {
+            display: none;
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background-color: #002e5d;
+            color: var(--sidebar-color);
+            z-index: 1000;
+            overflow-y: auto;
+            transition: all 0.3s;
+
+        }
+
+            .sidebar.active {
+                display: block;
+            }
+
+        .sidebar-header {
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+            .sidebar-header img {
+                max-width: 100%;
+                height: auto;
+            }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+            .sidebar-menu li {
+                position: relative;
+            }
+
+                .sidebar-menu li a {
+                    display: block;
+                    padding: 12px 20px;
+                    color: var(--sidebar-color);
+                    text-decoration: none;
+                    transition: all 0.3s;
+                }
+
+                    .sidebar-menu li a:hover,
+                    .sidebar-menu li a.active {
+                        background: #04536c;
+                    }
+
+
+                    .sidebar-menu li a i {
+                        margin-right: 10px;
+                        width: 20px;
+                        text-align: center;
+                    }
+
+            .sidebar-menu .dropdown-menu {
+                position: static;
+                float: none;
+                width: 100%;
+                padding: 0;
+                margin: 0;
+                background-color: transparent;
+                border: none;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            .sidebar-menu .dropdown-item {
+                padding: 10px 20px 10px 40px;
+                color: var(--sidebar-color);
+            }
+
+                .sidebar-menu .dropdown-item:hover {
+                    background: var(--sidebar-hover-bg);
+                }
+
+            .sidebar-menu .dropdown-toggle::after {
+                float: right;
+                margin-top: 8px;
+            }
+
+        /* Main content area */
+        .main-content {
+            padding: 20px;
+            min-height: 100vh;
+            background: #f8f9fa;
+        }
+
+        /* Toggle button */
+        .menu-toggle {
+            top: 10px;
+            left: 10px;
+            z-index: 1100;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 25px;
+            padding: 5px 15px;
+            cursor: pointer;
+            background: #002e5d !important;
+            /* display: block !important; */
+            /* visibility: visible !important; */
+            /* opacity: 1 !important; */
+        }
+
+        }
+
+        /* Collapsed state */
+        body.collapsed {
+            padding-left: 60px;
+        }
+
+            body.collapsed .sidebar {
+                width: 60px;
+                overflow: hidden;
+            }
+
+            body.collapsed .sidebar-header,
+            body.collapsed .sidebar-menu span,
+            body.collapsed .dropdown-toggle::after {
+                display: none;
+            }
+
+            body.collapsed .sidebar-menu li a {
+                text-align: center;
+                padding: 12px 5px;
+            }
+
+                body.collapsed .sidebar-menu li a i {
+                    margin-right: 0;
+                    font-size: 1.2rem;
+                }
+
+            body.collapsed .dropdown-menu {
+                position: absolute;
+                left: 60px;
+                top: 0;
+                width: 200px;
+                background: var(--sidebar-bg);
+                display: none;
+            }
+
+            body.collapsed .sidebar-menu li:hover > .dropdown-menu {
+                display: block;
+            }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            body {
+                padding-left: 0;
+            }
+
+            .sidebar {
+                left: -100%;
+            }
+
+            body.show-sidebar {
+                overflow: hidden;
+            }
+
+                body.show-sidebar .sidebar {
+                    left: 0;
+                    width: var(--sidebar-width);
+                }
+
+            .menu-toggle {
+                display: block;
+            }
+        }
+
+
+        .topbar{
+            flex-wrap:nowrap !important;
+        }
+    </style>
+    <script type="text/javascript">
+        function countChar(val) {
+            var len = val.value.length;
+            if (len > 140) {
+                val.value = val.value.substring(0, 140);
+            } else {
+                $('#charNum').text(140 - len);
+            }
+        };
+    </script>
+    <link href="css/UpgadedCss/Main.css" rel="stylesheet" />
+    <%--<link href="../css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+    <link href="css/font-awesome.css" rel="stylesheet" type="text/css" />--%>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet" />
+    <script>
+    function dashboard() {
+            window.addEventListener('DOMContentLoaded', () => {
+                const header = document.getElementById('head_main');
+                const sidebar = document.querySelector(".sidebar");
+                const head_main = document.querySelector("#head_main");
+                const body_main = document.querySelector(".body-main");
+                const headerHeight = header.offsetHeight;
+
+                sidebar.style.top = `${headerHeight}px`;
+                body_main.style.paddingTop = `${headerHeight}px`;
+                head_main.style.position = "fixed";
+            });
+        }
+    </script>
+    <asp:ContentPlaceHolder ID="head" runat="server">
+    </asp:ContentPlaceHolder>
+
+</head>
+<body>
+    <form id="form1" runat="server">
+        <AjaxToolkit:ToolkitScriptManager ID="ToolkitScriptManager1" runat="server"></AjaxToolkit:ToolkitScriptManager>
+
+
+        <%-- <asp:ScriptManager ID="sm" runat="server"></asp:ScriptManager>--%>
+        <div id="head_main" class="header">
+            <div class="topbar container-fluid" style="max-width: 1238px; padding-right:0px !important">
+                <button type="button" class="menu-toggle" id="menuToggle" runat="server" onclick="toggleSideBar()">
+                    ☰
+
+                </button>
+                <div class="logo_div">
+                    <div style="display: flex; align-items: center; gap: 10px">
+
+                        <a href="Default.aspx">
+
+                            <img src="https://www.fhraiconvention.com/images/REDEFINING%20HOSPITALITY%20FOR%20A%20NEW%20INDIA.pdf_page-0001%20(1).jpg" style="max-width:150px" alt="logo" />
+
+                        </a>
+                        <%-- <h4 class="logo_text">The Federation of Hotel & Restaurant Associations of India
+ </h4>--%>
+                    </div>
+
+
+                </div>
+
+
+                <%--   <div class="login_register">
+                    <a href="Convention_Login.aspx">
+                        <h4>Login</h4>
+                    </a>
+                </div>--%>
+
+                <div class="login_register" style="gap:30px" runat="server" id="DivLogin1">
+                   <div style="min-width: max-content;">
+                    <a href='<%=Page.ResolveUrl("~/Convention_Registration.aspx")%>'>
+                        <h4 > Delegate Registration </h4>
+                    </a>
+                       </div>
+                    <div style="min-width: max-content;">
+                    <a href='<%=Page.ResolveUrl("~/Convention_Login.aspx")%>'>
+                        <h4 style="background:#f44336"> Delegate Login </h4>
+                    </a>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap:10px;max-width: 350px; margin-left: auto;">
+                <div style="color:black;" id="home" runat="server">
+                    <a href="convention_dashboard.aspx">
+                       <i class="fa fa-home" style="font-size: 30px !important;"></i>
+                        </a>
+                   </div>
+                <div class="member_select_name " runat="server" id="DivMember" style="display: none; margin-left: auto; width: 100%;">
+                   
+                    <p>
+                        <asp:Literal ID="LtMemberName" runat="server"></asp:Literal>
+                    </p>
+                    <div class="member_profile_pic">
+                        <img src="https://www.fhraiconvention.com/images/user_Default.jpg" alt="profile pic" runat="server" id="imgMember" />
+                    </div>
+                    <div class="profile_dropdown dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <img src="images/profile_dropdown.png" id="menu1" /></a>
+                        <ul class="dropdown-menu profile_menu_ul dropdown-menu-right clearfix" role="menu" aria-labelledby="menu1">
+                            <%-- <li ><a  href="#" data-toggle="modal" data-target="#changePasswordPopup" ><i class="fa fa-cog" aria-hidden="true"></i> &nbsp; Change Password</a></li>--%>
+                            <li class="logout_li"><a href="Convention_Login.aspx"><i class="fa fa-power-off" aria-hidden="true"></i>&nbsp; Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+                    </div>
+            </div>
+
+
+
+        </div>
+      <nav id="nav1" runat="server">
+            <div class="menu">
+                <div class="logo">
+                    <a href="Default.aspx">
+
+                        <img src="images/REDEFINING%20HOSPITALITY%20FOR%20A%20NEW%20INDIA.pdf_page-0001%20(1).jpg" style="max-width: 151px; width: 100%" alt="logo" class="mob_logo" />
+
+                    </a>
+                </div>
+                <div class="hamburger" onclick="toggleMenu()">☰</div>
+                <ul class="menu-links" id="menuLinks">
+
+
+                    <li class="has-dropdown">
+                        <a href="#" onclick="toggleDropdown(event)">About Convention ▾</a>
+                        <ul>
+                            <li><a href="convention_about.aspx">About Convention</a></li>
+                            <li><a href="convention_about_city.aspx">About Convention City</a></li>
+                            <li><a href="convention_venue_detail.aspx">The Venue</a></li>
+                            <li><a href="FHRAI_executive_committee.aspx">FHRAI Executive Committee</a></li>
+                            <li><a ef="#" data-toggle="modal" data-target="#myModal3">Convention Organizing Committee</a></li>
+                            <li><a href="pdf/convention_brochure.pdf" target="_blank">Download Brochure</a></li>
+                            <li><a href="#" data-toggle="modal" data-target="#myModal3">Messages</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="has-dropdown">
+                        <a href="#" onclick="toggleDropdown(event)">Programme ▾</a>
+                        <ul>
+                            <li ><a href="#" data-toggle="modal" data-target="#myModal3">Programme</a></li>
+                            <li ><a href="#" data-toggle="modal" data-target="#myModal3">Spouse Programme</a></li>
+                            <li><a href="#" data-toggle="modal" data-target="#myModal3">Post Convention Tour</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="has-dropdown">
+                        <a href="#" onclick="toggleDropdown(event)">Registration ▾</a>
+                        <ul>
+                            <li><a href="convention_registration_fee.aspx">Registration Fee</a></li>
+                             <li ><a href="CONVENTION_HOTELS.aspx">Convention Hotels</a></li>
+                            <li><a href="convention_registration.aspx">Register Online</a></li>
+                            <li><a href="pdf/Registration_Form_56th_FHRAI_Annual_Convention.pdf" target="_blank">Register Offline</a></li>
+                        </ul>
+                    </li>
+
+                    <li><a href="#" data-toggle="modal" data-target="#myModal3">Awards</a></li>
+                    <%--     <li><a href="#" data-toggle="modal" data-target="#myModal3">Awards</a></li>--%>
+                    <li><a href="#" data-toggle="modal" data-target="#myModal3">Speakers</a></li>
+                    <li><a href="sponsorpage.aspx">Sponsorship</a></li>
+                    <li><a href="Exhibition.aspx">Exhibitor</a></li>
+                    <%-- <li><a href="Convention_Login.aspx">Delegate Login</a></li>--%>
+                </ul>
+            </div>
+        </nav>
+
+
+        <div id="siderbar1" runat="server">
+
+
+            <!-- Sidebar -->
+            <div class="sidebar " id="sidebar">
+
+
+                <ul class="sidebar-menu">
+                    <li>
+                        <a href="convention_dashboard.aspx" class="active">
+
+
+
+                            <span>Home</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="convention_registration.aspx">
+
+                            <span>My Profile</span>
+                        </a>
+
+                    </li>
+
+                    <li class="dropdown">
+                        <a href="#">
+
+                            <span>Registration Confirmation</span>
+                        </a>
+
+                    </li>
+
+                    <li class="dropdown">
+                        <a href="#">
+
+                            <span>Invoices</span>
+                        </a>
+
+                    </li>
+                    <li class="dropdown">
+                        <a href="convention_PayNow.aspx">
+
+                            <span>Payment/Receipts</span>
+                        </a>
+
+                    </li>
+                    <li class="dropdown">
+                        <a href="Convention_hotelandtravel.aspx">
+
+                            <span>Hotel Reservation</span>
+                        </a>
+
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="head_main2" class="header" style="display: none">
+            <div class="header_menu_div">
+                <nav class="navbar  mynavbar" role="navigation">
+                    <div id="nav-main2">
+                        <div class="navbar-header">
+                            <div class="logo_div">
+                                <a href="Default.aspx">
+                                    <img src="images/logo3.png" /></a>
+                            </div>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#myNavbar" aria-expanded="false">
+                                <span class="sr-only">Toggle navigation</span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                            </button>
+                        </div>
+                        <div class="header_top_wrap">
+                            <div class="google_translate_div">
+                                <div class="google_t_element">
+                                    <div id="google_translate_element"></div>
+                                </div>
+                            </div>
+
+                            <div class="website_search_div">
+                                <!-- Google Search Result Snippet Begins -->
+                                <script>
+                                    (function () {
+                                        var cx = '008207063786558279179:q90xzgvztre';
+                                        var gcse = document.createElement('script');
+                                        gcse.type = 'text/javascript';
+                                        gcse.async = true;
+                                        gcse.src = 'https://cse.google.com/cse.js?cx=' + cx;
+                                        var s = document.getElementsByTagName('script')[0];
+                                        s.parentNode.insertBefore(gcse, s);
+                                    })();
+                                </script>
+                                <gcse:search></gcse:search>
+                                <!-- Google Search Result Snippet Ends -->
+                            </div>
+                            <%-- <div class="social_links_div">
+                                <a href="convention_sitemap.aspx">
+                                    <img src="images/sitemap_icon.png" /></a>
+                            </div>--%>
+                        </div>
+                        <div class="collapse navbar-collapse menu_desktop" id="myNavbar">
+                            <ul class="header_ul call_email nav navbar-nav" style="float: left !important">
+                                <li class="header-li">
+                                    <a href="#" style="cursor: context-menu">
+                                        <h4>Call us at 011-40780780</h4>
+                                    </a>
+                                </li>
+                                <li class="header-li">
+                                    <a href="mailto:convention53@fhrai.com">
+                                        <h4>Email: convention53@fhrai.com</h4>
+                                    </a>
+                                </li>
+                            </ul>
+                            <ul class="header_ul nav navbar-nav" style="display: none">
+
+
+
+
+
+                                <li class="header-li">
+                                    <a href="convention_contact_us.aspx">
+                                        <h4>CONTACT US</h4>
+                                    </a>
+                                </li>
+                            </ul>
+                            <div class="member_menu menu_mobile clearfix">
+                                <ul class="member_ul clearfix">
+                                    <li class="home_icon_li"><a href="https://www.fhrai.com">
+                                        <img src="images/HOME-ICON-01.png" /></a></li>
+                                    <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">About Convention <span class="caret"></span></a>
+                                        <ul class="dropdown-menu dropdown-content member_sub_ul">
+                                            <li><a href="#" data-toggle="modal" data-target="#myModal3">About Convention</a></li>
+                                            <li><a href="lucknow_convention_about_city.aspx">About Convention City</a></li>
+                                            <li><a href="lucknow_convention_venue_detail.aspx">The Venue</a></li>
+                                            <%--      <li><a href="Convention_Organizing_Committee.aspx">Convention Organizing Committee</a></li>--%>
+                                            <li><a href="FHRAI_executive_committee.aspx">FHRAI Executive Committee</a></li>
+                                            <li><a href="#" data-toggle="modal" data-target="#convention1">Download Brochure</a></li>
+                                            <li><a href="#" data-toggle="modal" data-target="#myModal3">Messages</a></li>
+                                            <%-- <li><a href="convention_agenda.aspx">Agenda/Schedule</a></li>
+                                            <li><a href="convention_venue_detail.aspx">Venue Details </a></li>--%>
+                                            <%--       <li data-toggle="modal" data-target="#myModal3"><a href="#">Speakers</a></li>--%>
+                                            <%--<a href="convention_registration_fee.aspx">--%>
+                                            <%--                 <li><a href="convention_registration_fee.aspx">Registration Fee</a></li>--%>
+                                            <%--<li><a href="convention_registration.aspx">Apply Online</a></li>--%>
+                                            <%--                 <li><a href="document/Delegate_Registration_Form.pdf">Apply Offline</a></li>--%>
+                                        </ul>
+                                    </li>
+                                    <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Programme<span class="caret"></span></a>
+                                        <ul class="dropdown-menu dropdown-content member_sub_ul">
+                                            <li><a href="#" data-toggle="modal" data-target="#myModal3">Programme</a></li>
+                                            <li><a href="#" data-toggle="modal" data-target="#myModal3">Spouse Programme</a></li>
+                                            <li><a href="#" data-toggle="modal" data-target="#myModal3">Post Convention Tour</a></li>
+
+
+
+                                        </ul>
+                                    </li>
+                                    <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Registration<span class="caret"></span></a>
+                                        <ul class="dropdown-menu dropdown-content member_sub_ul">
+                                            <li><a href="convention_registration_fee.aspx">Registration Fee</a></li>
+                                            <li><a href="convention_registration.aspx" <%-- data-toggle="modal" data-target="#myModal"--%>>Register Online</a></li>
+                                            <li><a href="pdf/Delegate_Registration_Form.pdf" target="_blank">Register Offline</a></li>
+                                        </ul>
+                                    </li>
+                                    <li data-toggle="modal" data-target="#myModal3"><a href="#">Awards</a></li>
+                                    <li data-toggle="modal" data-target="#myModal3"><a href="#">Speakers</a></li>
+                                    <li ><a href="sponsorpage.aspx">Sponsorship</a></li>
+                                    <li data-toggle="modal" data-target="#myModal3">
+                                        <a href="#">
+                                            <h4>Exhibition</h4>
+                                        </a>
+                                    </li>
+                                    <%-- <li><a href="convention_message.aspx">Messages</a></li>--%>
+                                    <%--  <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Media <span class="caret"></span></a>
+                                        <ul class="dropdown-menu dropdown-content member_sub_ul">--%>
+                                    <%-- <li><a href="convention_photo_gallery.aspx">--%><%--<li data-toggle="modal" data-target="#myModal3"><a href="#">Photo Gallery</a></li>--%>
+                                    <%--<li><a href="convention_video_gallery.aspx">--%><%--<li data-toggle="modal" data-target="#myModal3"><a href="#">Video Gallery</a></li>--%>
+                                    <%-- </ul>
+                                    </li>--%>
+                                    <%--  <li><a href="convention_PostConvTour.aspx">Post Convention Tour</a></li>--%>
+                                    <%--<li ><a  href="convention_tour.aspx"><li data-toggle="modal" data-target="#myModal3"><a  href="#">Post Convention Tour </a></li>--%>
+                                    <li data-toggle="modal" data-target="#myModal3"><a href="#">Exhibition</a></li>
+                                </ul>
+                                <div class="login_register" style="display: none">
+                                    <a href="https://www.fhrai.com/pdf/FHRAI-FINAL-AUG.pdf">
+
+                                        <h4>Download Brochure</h4>
+                                    </a>
+                                </div>
+                                <div class="login_register" runat="server" id="DivReg1" style="display: none">
+                                    <a data-toggle="modal" data-target="#myModal">
+
+                                        <h4>Register Online</h4>
+                                    </a>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                </nav>
+            </div>
+            <div class="member_menu_div mbr_desk_view clearfix">
+                <div class="member_menu">
+                    <ul class="member_ul clearfix multi-level">
+                        <li class="home_icon_li"><a href="Default.aspx">
+                            <img src="images/HOME-ICON-01.png" /></a></li>
+                        <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">About Convention <span class="caret"></span></a>
+                            <ul class="dropdown-menu dropdown-content member_sub_ul">
+                                <li><a href="#" data-toggle="modal" data-target="#myModal3">About Convention</a></li>
+                                <li><a href="#" data-toggle="modal" data-target="#myModal3">About Convention City</a></li>
+                                <li><a href="lucknow_convention_venue_detail.aspx">The Venue</a></li>
+                                <%-- <li><a href="Convention_Organizing_Committee.aspx">Convention Organizing Committee</a></li>--%>
+                                <li><a href="FHRAI_executive_committee.aspx">FHRAI Executive Committee</a></li>
+                                <li><a href="#" data-toggle="modal" data-target="#myModal3">Download Brochure</a></li>
+                                <li><a href="#" data-toggle="modal" data-target="#myModal3">Messages</a></li>
+                                <%--       <li><a href="convention_agenda.aspx">Agenda/Schedule</a></li>
+                                <li><a href="convention_venue_detail.aspx">Venue Details </a></li>--%>
+                                <%--  <li><a href="convention_speaker.aspx">--%><%--<li data-toggle="modal" data-target="#myModal3"><a href="#">Speakers</a></li>--%>
+                                <%-- <li><a href="convention_registration_fee.aspx">Registration Fee</a></li>--%>
+                                <%-- <li><a href="convention_registration.aspx">Apply Online</a></li>--%>
+                                <%--           <li><a href="document/Delegate_Registration_Form.pdf">Apply Offline</a></li>--%>
+                            </ul>
+                        </li>
+                        <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Programme<span class="caret"></span></a>
+                            <ul class="dropdown-menu dropdown-content member_sub_ul">
+                                <li><a href="#" data-toggle="modal" data-target="#myModal3">Programme</a></li>
+                                <li><a href="#" data-toggle="modal" data-target="#convention2">Spouse Programme</a></li>
+                                <li><a href="#" data-toggle="modal" data-target="#convention3">Post Convention Tour</a></li>
+
+
+
+                            </ul>
+                        </li>
+                        <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Registration<span class="caret"></span></a>
+                            <ul class="dropdown-menu dropdown-content member_sub_ul">
+                                <li><a href="convention_registration_fee.aspx">Registration Fee</a></li>
+                                <li><a href="convention_registration.aspx" <%-- data-toggle="modal" data-target="#myModal"--%>>Register Online</a></li>
+                                <li><a href="pdf/Delegate_Registration_Form.pdf" target="_blank">Register Offline</a></li>
+                            </ul>
+                        </li>
+                        <li data-toggle="modal" data-target="#myModal3"><a href="#">Awards</a></li>
+                        <li data-toggle="modal" data-target="#myModal3"><a href="#">Speakers</a></li>
+                        <li ><a href="sponsorpage.aspx">Sponsorship </a></li>
+                        <li data-toggle="modal" data-target="#myModal3"><a href="#">Exhibition</a></li>
+                        <%--    <li><a href="convention_message.aspx">Messages</a></li>--%>
+                        <%-- <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Media <span class="caret"></span></a>
+                            <ul class="dropdown-menu dropdown-content member_sub_ul">--%>
+                        <%--<li><a href="convention_photo_gallery.aspx">--%><%--<li data-toggle="modal" data-target="#myModal3"><a href="#">Photo Gallery</a></li>--%>
+                        <%--  <li><a href="convention_video_gallery.aspx">--%><%--<li data-toggle="modal" data-target="#myModal3"><a href="#">Video Gallery</a></li>--%>
+                        <%-- </ul>
+                        </li>--%>
+                        <%--  <li><a href="convention_PostConvTour.aspx">Post Convention Tour</a></li>--%>
+                        <%--<li ><a  href="convention_tour.aspx"><li data-toggle="modal" data-target="#myModal3"><a  href="#">Post Convention Tour </a></li>--%>
+                        <%-- <li data-toggle="modal" data-target="#myModal3"><a href="#">Exhibition</a></li>--%>
+                    </ul>
+                    <div class="modal fade" id="convention1" role="dialog">
+                        <div class="modal-dialog">
+
+                            <!-- Modal content-->
+                            <div class="modal-content">
+                                <div class="modal-header" style="background-color: rgb(255, 102, 52); color: #fff">
+                                    <button type="button" class="close" data-dismiss="modal" style="color: #fff; opacity: 2">&times;</button>
+                                    <h4 class="modal-title">Brochure</h4>
+                                </div>
+                                <div class="modal-body">
+                                    <h3 style="text-align: center">Coming Soon</h3>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="modal fade" id="convention2" role="dialog">
+                        <div class="modal-dialog">
+
+                            <!-- Modal content-->
+                            <div class="modal-content">
+                                <div class="modal-header" style="background-color: rgb(255, 102, 52); color: #fff">
+                                    <button type="button" class="close" data-dismiss="modal" style="color: #fff; opacity: 2">&times;</button>
+                                    <h4 class="modal-title">Spouse Programme</h4>
+                                </div>
+                                <div class="modal-body">
+                                    <h3 style="text-align: center">Coming Soon</h3>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="modal fade" id="convention3" role="dialog">
+                        <div class="modal-dialog">
+
+                            <!-- Modal content-->
+                            <div class="modal-content">
+                                <div class="modal-header" style="background-color: rgb(255, 102, 52); color: #fff">
+                                    <button type="button" class="close" data-dismiss="modal" style="color: #fff; opacity: 2">&times;</button>
+                                    <h4 class="modal-title">Post Convention Tour</h4>
+                                </div>
+                                <div class="modal-body">
+                                    <h3 style="text-align: center">Coming Soon</h3>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="login_register" style="display: none">
+                        <a href="https://www.fhrai.com/pdf/FHRAI-FINAL-AUG.pdf">
+
+                            <h4>Download Brochure</h4>
+                        </a>
+                    </div>
+                    <div class="login_register" runat="server" id="DivReg" style="display: none">
+                        <a data-toggle="modal" data-target="#myModal">
+
+                            <h4>Register Online</h4>
+                        </a>
+                    </div>
+                    <div class="login_register lg345" style="width: 120px" runat="server" id="DivLogin">
+                        <a href='<%=Page.ResolveUrl("~/Convention_Login.aspx")%>'>
+                            <h4>Delegate Login </h4>
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+
+            <%--<div class="panel-group">
+                <div class="panel panel-default">
+                    <div class="down_img">
+                            <a data-toggle="collapse" href="#collapse1"><img src="images/down_arrow2.png" /></a>
+                    </div>
+                    <div class="member_menu_div mbr_mob_view gyna_desc_div3">
+                        <div class="member_menu panel-collapse collapse" id="collapse1">
+                            <ul class="member_ul list-group">
+                                <li><a href="#">Membership</a></li>
+                                <li><a href="#">Events & updates</a></li>
+                                <li><a href="#">Convention</a></li>
+                                <li><a href="#">Awards</a></li>
+                                <li><a href="#">Publication</a></li>
+                            </ul>
+                            <div class="login_register">
+                                <a href="#">
+                                    <h4>Login / Register</h4>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+            </div>--%>
+        </div>
+
+        <div class="body-main" >
+            <asp:ContentPlaceHolder ID="ContentPlaceHolder1" runat="server">
+            </asp:ContentPlaceHolder>
+        </div>
+        <div class="header">
+
+            <!--Content before waves-->
+
+
+            <!--Waves Container-->
+            <div>
+                <svg class="waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+                    viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+                    <defs>
+                        <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+                    </defs>
+                    <g class="parallax">
+                        <use xlink:href="#gentle-wave" x="88" y="0" fill="rgba(254,235,212,0.7" />
+                        <use xlink:href="#gentle-wave" x="88" y="3" fill="rgba(254,235,212,0.5)" />
+                        <use xlink:href="#gentle-wave" x="88" y="5" fill="rgba(254,235,212,0.3)" />
+                        <use xlink:href="#gentle-wave" x="88" y="7" fill="#FEEBD4" />
+                    </g>
+                </svg>
+            </div>
+            <!--Waves end-->
+
+        </div>
+        <!--Header ends-->
+
+        <div class="contact_sec" style="padding: 15px;">
+            <div class="container" style="display: flex; justify-content: center; align-items: center; padding: 20px 0px; background-color: white;">
+                <div style="flex: 1 1 0%; text-align: center;">
+                    <a href="https://www.sihra.in/" target="_blank">
+                        <img src="https://www.fhraiconvention.com/images/2-2.png" alt="Logo 1" style="max-width: 100%; height: auto; display: flex; margin: 0px 10px;"></a>
+                </div>
+                <div style="flex: 1 1 0%; text-align: center;">
+                    <a href="https://www.hraei.co.in/" target="_blank">
+                        <img src="https://www.fhraiconvention.com/images/2-3.png" alt="Logo 2" style="max-width: 100%; height: auto; display: flex; margin: 0px 10px;"></a>
+                </div>
+                <div style="flex: 1 1 0%; text-align: center;">
+                    <a href="https://www.fhrai.com/" target="_blank">
+                        <img src="https://www.fhraiconvention.com/images/2-4.png" alt="Logo 3" style="max-width: 100%; height: auto; display: flex; margin: 0px 10px;"></a>
+                </div>
+                <div style="flex: 1 1 0%; text-align: center;">
+                    <a target="_blank" href="https://www.hrani.net.in/default.aspx">
+                        <img src="https://www.fhraiconvention.com/images/2-5.png" alt="Logo 4" style="max-width: 100%; height: auto; display: flex; margin: 0px 10px;"></a>
+                </div>
+                <div style="flex: 1 1 0%; text-align: center;">
+                    <a href="https://www.hrawi.com/" target="_blank">
+                        <img src="https://www.fhraiconvention.com/images/file-1721660655146.png" alt="Logo 5" style="max-width: 100%; height: auto; display: flex; margin: 0px 10px;"></a>
+                </div>
+            </div>
+            <div class="col-md-12 col-sm-12 col-xs-12 contact_12_div">
+                <div class="contact_head">
+                    <h3>CONTACT US</h3>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 contact_6_div" style="text-align: left">
+
+                        <div class="contact_person">
+                            <h4>Payal Swami</h4>
+                            <p>Assistant Secretary General, FHRAI</p>
+                            <p><span>Email:</span> <a href="mailto:asg@fhrai.com">asg@fhrai.com</a></p>
+                            <p><span>Phone:</span> 85275 00385</p>
+                        </div>
+
+                   <%--     <div class="contact_person">
+                            <h4>Sundar Singaram</h4>
+                            <p>Director Operations – SIHRA</p>
+                            <p><span>Email:</span> <a href="mailto:sundar@sihra.in">sundar@sihra.in</a></p>
+                            <p><span>Phone:</span> 94440 50606</p>
+                        </div>--%>
+
+
+                    </div>
+
+                    <div class="col-md-6" style="text-align: left">
+                     <%--   <div class="additional_info">
+                            <p>
+                                Additional information is also available on
+                                <br>
+                                <a href="https://www.fhraiconvention.com" target="_blank">www.fhraiconvention.com</a>
+                            </p>
+                        </div>--%>
+
+                        <div class="address_sec" style="margin-top:0px !important">
+                            <h4>Convention Secretariat</h4>
+                            <p>
+                                The Federation of Hotel & Restaurant Associations of India<br>
+                                Regd. Office: B-82, 8th Floor, Himalaya House, 23 Kasturba Gandhi Marg,<br>
+                                New Delhi – 110 001
+                            </p>
+
+
+                        </div>
+
+                        <div class="phone">
+                            <p><span>Phone:</span> (011) 40780780</p>
+                            <p>
+                                <span>Email:</span>
+                                <a href="mailto:Convention56@fhrai.com">Convention56@fhrai.com</a>,
+        <a href="mailto:fhrai@fhrai.com">fhrai@fhrai.com</a>
+                            </p>
+                            <b><a href="privacy_policy.aspx">Privacy Policy</a></b>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-sm-6 col-xs-6 contact_6_div form_6_div" style="display: none">
+                        <div class="write_us">
+                            <h4>WRITE TO US</h4>
+                        </div>
+                        <div class="contact_form">
+                            <asp:TextBox ID="txtName" runat="server" CssClass="contact_input" placeholder="YOUR NAME" MaxLength="100"></asp:TextBox>
+                            <asp:RequiredFieldValidator ID="rfvName" runat="server" ControlToValidate="txtName"
+                                ErrorMessage="Please Enter Name" SetFocusOnError="true" Display="None"
+                                ValidationGroup="vgContact"></asp:RequiredFieldValidator>
+                            <asp:TextBox ID="txtEmail" runat="server" CssClass="contact_input" placeholder="YOUR EMAIL" MaxLength="150"></asp:TextBox>
+                            <asp:RequiredFieldValidator ID="rfvEmail" runat="server" ControlToValidate="txtEmail"
+                                ErrorMessage="Please Enter Email" SetFocusOnError="true" Display="None"
+                                ValidationGroup="vgContact"></asp:RequiredFieldValidator>
+                            <asp:RegularExpressionValidator ID="revEmail" runat="server" ControlToValidate="txtEmail"
+                                ErrorMessage="Please Enter Valid Email" SetFocusOnError="true" Display="None" ValidationExpression="\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*"
+                                ValidationGroup="vgContact"></asp:RegularExpressionValidator>
+                            <asp:TextBox ID="txtMessage" runat="server" TextMode="MultiLine" CssClass="contact_txtarea" onkeyup="countChar(this)" placeholder="WRITE YOUR MESSAGE (140 CHAR)" MaxLength="150"></asp:TextBox>
+                            <asp:RequiredFieldValidator ID="rfvMessage" runat="server" ControlToValidate="txtMessage"
+                                ErrorMessage="Please Enter Message" SetFocusOnError="true" Display="None"
+                                ValidationGroup="vgContact"></asp:RequiredFieldValidator>
+                            <asp:RegularExpressionValidator ID="RegularExpressionValidator1" runat="server" ControlToValidate="txtName" ForeColor="Red"
+                                ValidationExpression="[a-zA-Z0-9_\s]*$" ErrorMessage="*Valid characters: Alphabets and Numbers." SetFocusOnError="true" Display="None"
+                                ValidationGroup="vgContact" />
+
+                            <asp:RegularExpressionValidator ID="RegularExpressionValidator2" runat="server" ControlToValidate="txtMessage" ForeColor="Red"
+                                ValidationExpression="[a-zA-Z0-9,._\s]*$" ErrorMessage="*Valid characters: Alphabets and Numbers." SetFocusOnError="true" Display="None"
+                                ValidationGroup="vgContact" />
+                            <AjaxToolkit:FilteredTextBoxExtender ID="FilteredTextBoxExtender1" runat="server" TargetControlID="txtName" FilterMode="InvalidChars" InvalidChars="&();|~!@#$%^*<>/\{}:';/*+_~`[]=&quot;"></AjaxToolkit:FilteredTextBoxExtender>
+                            <AjaxToolkit:FilteredTextBoxExtender ID="FilteredTextBoxExtender2" runat="server" TargetControlID="txtEmail" FilterMode="InvalidChars" InvalidChars=";|~!#$%^*<>/\{}:';/*+_~`[]=&quot;()&"></AjaxToolkit:FilteredTextBoxExtender>
+                            <AjaxToolkit:FilteredTextBoxExtender ID="FilteredTextBoxExtender3" runat="server" TargetControlID="txtMessage" FilterMode="InvalidChars" InvalidChars=";|~!@#$%^*<>/\{}:';/*+_~`[]=&quot;"></AjaxToolkit:FilteredTextBoxExtender>
+                            <div class="submit_btn">
+                                <asp:LinkButton ID="btnSubmit" runat="server" ValidationGroup="vgContact" OnClick="btnSubmit_Click">
+                                <h4>SUBMIT</h4>
+                                </asp:LinkButton>
+                                <asp:ValidationSummary ID="vsSubmit" runat="server" ValidationGroup="vgContact"
+                                    ShowMessageBox="true" ShowSummary="false" HeaderText="Please rectify following error(s):" />
+                            </div>
+                            <div class="remaining_char">
+                                <p>
+                                    <label id="charNum">140</label>
+                                    Characters Remaining
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3502.054975170368!2d77.22167139999999!3d28.628114399999998!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390cfd343f12bd75%3A0x8b2c8a595c293be8!2sThe%20Federation%20of%20Hotel%20%26%20Restaurant%20Associations%20of%20India!5e0!3m2!1sen!2sin!4v1751453580500!5m2!1sen!2sin" style="width: 100%" height="450" style="border: 0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        <%--     <div class="footer_div">
+            <div class="col-md-12 col-sm-12 col-xs-12 footer_12_div">
+                <div class="footer_link">
+                    <p><a href="convention_terms_and_conditions.aspx">Terms And Condition</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="convention_privacy_and_policy.aspx">Privacy Policy</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="convention_cancellation.aspx">Cancellation</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="convention_contact_us.aspx">Contact Us</a></p>
+                </div>
+              
+            </div>
+        </div>--%>
+        <div class="row footer_bottom" style="padding: 5px">
+            <div class="col-md-12  col-sm-12">
+                <p style="padding: 5px">&copy; Copyright FHRAI 2024. ALL RIGHTS RESERVED.</p>
+                <p style="padding:10px">Managed by <a href="https://www.ngauge.co.in/" style="color:white" target="blank">n-Gauge Event Management Solutions</a></</p>
+            </div>
+
+
+        </div>
+
+        <%--Convention tour popup--%>
+        <div id="myModal2" class="modal fade" role="dialog">
+            <div class="modal-dialog popup_model_main">
+                <!-- Modal content-->
+                <div class="modal-content comingsoon_popup">
+                    <div class="modal-header popup_head">
+                        <h4 class="modal-title">Coming Soon</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <%--convention Exhibition popup--%>
+        <div id="myModal3" class="modal fade" role="dialog">
+            <div class="modal-dialog popup_model_main">
+                <!-- Modal content-->
+                <div class="modal-content comingsoon_popup">
+                    <div class="modal-header popup_head">
+                        <h4 class="modal-title">Coming Soon</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="js/bootstrap.min.js"></script>
+
+        <%--google translator--%>
+        <script type="text/javascript">
+            function googleTranslateElementInit() {
+                new google.translate.TranslateElement({ pageLanguage: 'en', includedLanguages: 'hi', layout: google.translate.TranslateElement.InlineLayout.SIMPLE }, 'google_translate_element');
+            }
+        </script>
+        <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+        <%--google translator end--%>
+    </form>
+
+    <div class="modal fade" id="myModal" role="dialog">
+        <div class="modal-dialog">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: rgb(255, 102, 52); color: #fff">
+                    <button type="button" class="close" data-dismiss="modal" style="color: #fff; opacity: 2">&times;</button>
+                    <h4 class="modal-title">Register Online</h4>
+                </div>
+                <div class="modal-body">
+                    <h3 style="text-align: center">Coming Soon</h3>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Show/hide main mobile menu
+        function toggleMenu() {
+            document.getElementById("menuLinks").classList.toggle("show");
+        }
+
+        // Toggle dropdowns only on mobile
+        function toggleDropdown(e) {
+            if (window.innerWidth <= 768) {
+                e.preventDefault(); // prevent anchor click
+                const parent = e.target.closest("li");
+                parent.classList.toggle("show-dropdown");
+            }
+        }
+
+        // Optional: Close dropdowns on window resize
+        window.addEventListener("resize", () => {
+            if (window.innerWidth > 768) {
+                document.querySelectorAll(".menu-links li").forEach(li => {
+                    li.classList.remove("show-dropdown");
+                });
+            }
+        });
+    </script>
+
+    <%--<script>
+        function toggleSideBar() {
+            const sidebar = document.querySelector(".sidebar");
+            sidebar.classList.toggle("active");
+        }
+        window.addEventListener('DOMContentLoaded', () => {
+            const header = document.getElementById('head_main');
+            const sidebar = document.querySelector(".sidebar");
+            const body_main = document.querySelector(".body-main");
+            const headerHeight = header.offsetHeight;
+
+            sidebar.style.top = `${headerHeight} px`;
+            body_main.style.paddingTop = `${headerHeight} px`;
+        });
+    </script>--%>
+    <script>
+        function toggleSideBar() {
+            const sidebar = document.querySelector(".sidebar");
+            sidebar.classList.toggle("active");
+
+           
+        }
+
+        //function dashboard() {
+        //    window.addEventListener('DOMContentLoaded', () => {
+        //        const header = document.getElementById('head_main');
+        //        const sidebar = document.querySelector(".sidebar");
+        //        const body_main = document.querySelector(".body-main");
+        //        const headerHeight = header.offsetHeight;
+
+        //        sidebar.style.top = `${headerHeight}px`;
+        //        body_main.style.paddingTop = `${headerHeight}px`;
+
+        //    });
+        //}
+    </script>
+</body>
+</html>
