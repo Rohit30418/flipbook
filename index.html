@@ -326,36 +326,6 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .side-btn {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 25;
-      width: 58px;
-      height: 86px;
-      border: 0;
-      background: rgba(255,255,255,0.08);
-      color: rgba(255,255,255,0.82);
-      font-size: 48px;
-      line-height: 1;
-      cursor: pointer;
-      border-radius: 20px;
-      transition: 0.22s ease;
-      display: grid;
-      place-items: center;
-      box-shadow: 0 18px 40px rgba(0,0,0,0.16);
-    }
-
-    .side-btn:hover:not(:disabled) {
-      background: rgba(255,255,255,0.16);
-      color: #fff;
-      transform: translateY(-50%) scale(1.04);
-    }
-
-    .side-btn:disabled { opacity: 0.32; cursor: not-allowed; }
-    .side-btn.prev { left: 16px; }
-    .side-btn.next { right: 16px; }
-
     .bottom-toolbar {
       position: absolute;
       left: 0;
@@ -600,7 +570,6 @@
       .brand h1 { max-width: 42vw; font-size: 14px; }
       .brand p { display: none; }
       .viewer { padding: calc(var(--topbar-height) + 4px) 10px calc(var(--toolbar-height) + 8px); }
-      .side-btn { display: none; }
       .bottom-toolbar { grid-template-columns: 1fr; gap: 8px; padding: 10px 10px calc(10px + env(safe-area-inset-bottom)); }
       .tool-group { justify-content: center; flex-wrap: wrap; }
       .range-wrap { order: -1; }
@@ -651,9 +620,6 @@
         <a class="btn primary" id="downloadBtn" href="#" download aria-label="Download PDF">Download</a>
       </div>
     </header>
-
-    <button class="side-btn prev" type="button" id="sidePrev" aria-label="Previous page">‹</button>
-    <button class="side-btn next" type="button" id="sideNext" aria-label="Next page">›</button>
 
     <main class="viewer" id="viewer" aria-live="polite">
       <div class="book-stage" id="bookStage">
@@ -766,8 +732,6 @@
       nextBtn: document.getElementById("nextBtn"),
       firstBtn: document.getElementById("firstBtn"),
       lastBtn: document.getElementById("lastBtn"),
-      sidePrev: document.getElementById("sidePrev"),
-      sideNext: document.getElementById("sideNext"),
       zoomInBtn: document.getElementById("zoomInBtn"),
       zoomOutBtn: document.getElementById("zoomOutBtn"),
       resetZoomBtn: document.getElementById("resetZoomBtn")
@@ -775,7 +739,7 @@
 
     const controls = [
       els.fitBtn, els.fullBtn, els.prevBtn, els.nextBtn, els.firstBtn, els.lastBtn,
-      els.sidePrev, els.sideNext, els.zoomInBtn, els.zoomOutBtn, els.resetZoomBtn,
+      els.zoomInBtn, els.zoomOutBtn, els.resetZoomBtn,
       els.qualityBtn, els.soundBtn, els.pageRange
     ];
 
@@ -1437,10 +1401,8 @@
 
       els.prevBtn.disabled = atStart;
       els.firstBtn.disabled = atStart;
-      els.sidePrev.disabled = atStart;
       els.nextBtn.disabled = atEnd;
       els.lastBtn.disabled = atEnd;
-      els.sideNext.disabled = atEnd;
       els.pageRange.disabled = readMode;
 
       if (renderNow && state.isReady) {
@@ -1707,10 +1669,8 @@
       // Zoom/read mode blocks direct page gestures, not toolbar navigation.
       els.prevBtn.disabled = atStart;
       els.firstBtn.disabled = atStart;
-      els.sidePrev.disabled = atStart;
       els.nextBtn.disabled = atEnd;
       els.lastBtn.disabled = atEnd;
-      els.sideNext.disabled = atEnd;
       els.pageRange.disabled = readMode;
     }
 
@@ -1873,9 +1833,7 @@
 
     function bindEvents() {
       els.prevBtn.addEventListener("click", prevPage);
-      els.sidePrev.addEventListener("click", prevPage);
       els.nextBtn.addEventListener("click", nextPage);
-      els.sideNext.addEventListener("click", nextPage);
       els.firstBtn.addEventListener("click", () => goToPage(0));
       els.lastBtn.addEventListener("click", () => goToPage(state.totalPages - 1));
 
