@@ -201,6 +201,22 @@
       justify-content: flex-start;
       padding-left: 24px;
       padding-right: 24px;
+      cursor: grab;
+      touch-action: pan-x pan-y;
+    }
+
+    .viewer.is-zoomed.is-panning {
+      cursor: grabbing;
+    }
+
+    .viewer.is-zoomed #book,
+    .viewer.is-zoomed #book * {
+      cursor: grab !important;
+    }
+
+    .viewer.is-zoomed.is-panning #book,
+    .viewer.is-zoomed.is-panning #book * {
+      cursor: grabbing !important;
     }
 
     .book-wrap {
@@ -685,9 +701,9 @@
       defaultPdf: "iopepc.pdf",
       defaultTitle: "Premium Flipbook",
       defaultSubTitle: "Lazy HD PDF viewer with premium page turn",
-      minZoom: 0.65,
+      minZoom: 1,
       maxZoom: 3,
-      zoomStep: 0.15,
+      zoomStep: 0.20,
       renderWidth: { hd: 1450, ultra: 2100 },
       mobileRenderWidth: { hd: 1150, ultra: 1650 },
       maxCanvasPixels: 14000000,
@@ -762,6 +778,14 @@
       statusTimer: null,
       zoomRenderTimer: null,
       pinch: { active: false, startDistance: 0, startZoom: 1 },
+      pan: {
+        active: false,
+        pointerId: null,
+        startX: 0,
+        startY: 0,
+        startLeft: 0,
+        startTop: 0
+      },
       settings: { prefetchRange: 2, cacheLimit: 0, downloadEnabled: true }
     };
 
@@ -1247,13 +1271,15 @@
 
       const atStart = safePage <= 1;
       const atEnd = safePage >= state.totalPages;
+      const readMode = state.zoom > 1.001;
 
-      els.prevBtn.disabled = atStart;
-      els.firstBtn.disabled = atStart;
-      els.sidePrev.disabled = atStart;
-      els.nextBtn.disabled = atEnd;
-      els.lastBtn.disabled = atEnd;
-      els.sideNext.disabled = atEnd;
+      els.prevBtn.disabled = readMode || atStart;
+      els.firstBtn.disabled = readMode || atStart;
+      els.sidePrev.disabled = readMode || atStart;
+      els.nextBtn.disabled = readMode || atEnd;
+      els.lastBtn.disabled = readMode || atEnd;
+      els.sideNext.disabled = readMode || atEnd;
+      els.pageRange.disabled = readMode;
 
       if (renderNow && state.isReady) {
         renderVisiblePages().then(schedulePrefetch);
@@ -1349,6 +1375,7 @@
       });
 
       state.turnReady = true;
+      setTurnLocked(state.zoom > 1.001);
 
       const currentPage = Number($book.turn("page")) || (safeStart + 1);
       const currentView = $book.turn("view");
@@ -1449,7 +1476,7 @@
     }
 
     async function nextPage() {
-      if (!state.turnReady || !state.isReady || state.isTurning) return;
+      if (!state.turnReady || !state.isReady || state.isTurning || state.zoom > 1.001) return;
 
       await prepareDirection(1);
 
@@ -1459,7 +1486,7 @@
     }
 
     async function prevPage() {
-      if (!state.turnReady || !state.isReady || state.isTurning) return;
+      if (!state.turnReady || !state.isReady || state.isTurning || state.zoom > 1.001) return;
 
       await prepareDirection(-1);
 
@@ -1469,7 +1496,7 @@
     }
 
     async function goToPage(index) {
-      if (!state.turnReady || !state.isReady || state.isTurning) return;
+      if (!state.turnReady || !state.isReady || state.isTurning || state.zoom > 1.001) return;
 
       const safe = clamp(index, 0, state.totalPages - 1);
       const candidates = [safe];
@@ -1484,15 +1511,61 @@
       } catch (_) {}
     }
 
+    function setTurnLocked(locked) {
+      if (!state.turnReady) return;
+
+      try {
+        window.jQuery(els.book).turn("disable", !!locked);
+      } catch (_) {}
+    }
+
+    function syncZoomControls() {
+      const atMinimum = state.zoom <= CONFIG.minZoom + 0.001;
+      const atMaximum = state.zoom >= CONFIG.maxZoom - 0.001;
+
+      // Minus is only for returning toward normal size; it can never go below 100%.
+      els.zoomOutBtn.disabled = atMinimum;
+      els.zoomInBtn.disabled = atMaximum;
+      els.resetZoomBtn.disabled = atMinimum;
+
+      const readMode = !atMinimum;
+      const safePage = state.currentPage + 1;
+      const atStart = safePage <= 1;
+      const atEnd = safePage >= state.totalPages;
+
+      els.prevBtn.disabled = readMode || atStart;
+      els.firstBtn.disabled = readMode || atStart;
+      els.sidePrev.disabled = readMode || atStart;
+      els.nextBtn.disabled = readMode || atEnd;
+      els.lastBtn.disabled = readMode || atEnd;
+      els.sideNext.disabled = readMode || atEnd;
+      els.pageRange.disabled = readMode;
+    }
+
     function applyZoom() {
       state.zoom = clamp(state.zoom, CONFIG.minZoom, CONFIG.maxZoom);
-      els.bookWrap.style.transform = "scale(" + state.zoom + ")";
-      els.zoomValue.textContent = Math.round(state.zoom * 100) + "%";
 
-      if (state.zoom > 1.02) {
-        els.viewer.classList.add("is-zoomed");
-      } else {
-        els.viewer.classList.remove("is-zoomed");
+      const readMode = state.zoom > 1.001;
+      const baseWidth = Math.max(1, els.book.offsetWidth || 1);
+      const baseHeight = Math.max(1, els.book.offsetHeight || 1);
+
+      els.bookWrap.style.transform = "scale(" + state.zoom + ")";
+      els.bookWrap.style.marginRight =
+        readMode ? Math.round(baseWidth * (state.zoom - 1)) + "px" : "0px";
+      els.bookWrap.style.marginBottom =
+        readMode ? Math.round(baseHeight * (state.zoom - 1)) + "px" : "0px";
+
+      els.zoomValue.textContent = Math.round(state.zoom * 100) + "%";
+      els.viewer.classList.toggle("is-zoomed", readMode);
+
+      // Zoomed = reading/panning only. Normal/Fit = page turning enabled.
+      setTurnLocked(readMode);
+      syncZoomControls();
+
+      if (!readMode) {
+        state.pan.active = false;
+        state.pan.pointerId = null;
+        els.viewer.classList.remove("is-panning");
         els.viewer.scrollTo({ left: 0, top: 0, behavior: "smooth" });
       }
 
@@ -1505,18 +1578,64 @@
     }
 
     function zoomIn() {
-      state.zoom += CONFIG.zoomStep;
+      state.zoom = Math.min(CONFIG.maxZoom, state.zoom + CONFIG.zoomStep);
       applyZoom();
     }
 
     function zoomOut() {
-      state.zoom -= CONFIG.zoomStep;
+      // Never allow zoom-out below the normal fitted 100% view.
+      state.zoom = Math.max(CONFIG.minZoom, state.zoom - CONFIG.zoomStep);
       applyZoom();
     }
 
     function resetZoom() {
       state.zoom = 1;
       applyZoom();
+    }
+
+    function startPan(event) {
+      if (state.zoom <= 1.001 || state.pinch.active) return;
+      if (event.button !== undefined && event.button !== 0) return;
+
+      state.pan.active = true;
+      state.pan.pointerId = event.pointerId;
+      state.pan.startX = event.clientX;
+      state.pan.startY = event.clientY;
+      state.pan.startLeft = els.viewer.scrollLeft;
+      state.pan.startTop = els.viewer.scrollTop;
+
+      els.viewer.classList.add("is-panning");
+
+      try {
+        els.viewer.setPointerCapture(event.pointerId);
+      } catch (_) {}
+
+      event.preventDefault();
+    }
+
+    function movePan(event) {
+      if (!state.pan.active || state.zoom <= 1.001) return;
+      if (state.pan.pointerId !== null && event.pointerId !== state.pan.pointerId) return;
+
+      const dx = event.clientX - state.pan.startX;
+      const dy = event.clientY - state.pan.startY;
+
+      els.viewer.scrollLeft = state.pan.startLeft - dx;
+      els.viewer.scrollTop = state.pan.startTop - dy;
+      event.preventDefault();
+    }
+
+    function endPan(event) {
+      if (!state.pan.active) return;
+      if (state.pan.pointerId !== null && event.pointerId !== state.pan.pointerId) return;
+
+      try {
+        els.viewer.releasePointerCapture(event.pointerId);
+      } catch (_) {}
+
+      state.pan.active = false;
+      state.pan.pointerId = null;
+      els.viewer.classList.remove("is-panning");
     }
 
     function distanceBetweenTouches(touchA, touchB) {
@@ -1622,14 +1741,27 @@
         event.deltaY < 0 ? zoomIn() : zoomOut();
       }, { passive: false });
 
-      els.viewer.addEventListener("dblclick", () => {
-        state.zoom > 1.02 ? resetZoom() : zoomIn();
+      // Double-click is zoom-in only. Reset/Fit is the explicit way back to normal.
+      els.viewer.addEventListener("dblclick", (event) => {
+        if (state.zoom < CONFIG.maxZoom) {
+          event.preventDefault();
+          zoomIn();
+        }
       });
+
+      // In zoom/read mode, drag the document to pan instead of turning pages.
+      els.viewer.addEventListener("pointerdown", startPan, { passive: false });
+      els.viewer.addEventListener("pointermove", movePan, { passive: false });
+      els.viewer.addEventListener("pointerup", endPan, { passive: true });
+      els.viewer.addEventListener("pointercancel", endPan, { passive: true });
 
       els.viewer.addEventListener("touchstart", (event) => {
         if (event.touches.length !== 2) return;
 
         state.pinch.active = true;
+        state.pan.active = false;
+        state.pan.pointerId = null;
+        els.viewer.classList.remove("is-panning");
         state.pinch.startDistance =
           distanceBetweenTouches(event.touches[0], event.touches[1]);
         state.pinch.startZoom = state.zoom;
