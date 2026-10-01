@@ -700,6 +700,8 @@
 
     const CONFIG = Object.freeze({
       defaultPdf: "iopepc.pdf",
+      defaultFlipSound: "page-flip.mp3",
+      flipSoundVolume: 0.38,
       defaultTitle: "Premium Flipbook",
       defaultSubTitle: "Lazy HD PDF viewer with premium page turn",
       minZoom: 1,
@@ -790,9 +792,10 @@
       },
       audio: {
         enabled: true,
-        context: null,
-        buffer: null,
-        lastPlayedAt: 0
+        element: null,
+        url: "",
+        lastPlayedAt: 0,
+        primed: false
       },
       settings: { prefetchRange: 2, cacheLimit: 0, downloadEnabled: true }
     };
@@ -810,82 +813,91 @@
       return new URLSearchParams(window.location.search).get(name);
     }
 
-    function createPageFlipBuffer(context) {
-      const duration = 0.28;
-      const sampleRate = context.sampleRate;
-      const frameCount = Math.max(1, Math.floor(sampleRate * duration));
-      const buffer = context.createBuffer(1, frameCount, sampleRate);
-      const data = buffer.getChannelData(0);
+    function resolveFlipSoundUrl() {
+      const raw = (getQueryParam("sound") || CONFIG.defaultFlipSound).trim();
+      if (!raw) return "";
 
-      // A short shaped-noise burst gives a soft paper/rustle feel without an audio file.
-      for (let i = 0; i < frameCount; i++) {
-        const t = i / frameCount;
-        const attack = Math.min(1, t / 0.08);
-        const release = Math.pow(1 - t, 2.2);
-        const envelope = attack * release;
-
-        // Blend broad paper noise with a light textured ripple.
-        const noise = (Math.random() * 2 - 1);
-        const texture = Math.sin(i * 0.17) * 0.16 + Math.sin(i * 0.043) * 0.08;
-        data[i] = (noise * 0.82 + texture) * envelope;
+      try {
+        return new URL(raw, window.location.href).href;
+      } catch (_) {
+        return raw;
       }
-
-      return buffer;
     }
 
-    async function unlockAudio() {
-      if (!state.audio.enabled) return null;
+    function initPageFlipAudio() {
+      const url = resolveFlipSoundUrl();
+      state.audio.url = url;
 
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) return null;
-
-      if (!state.audio.context) {
-        state.audio.context = new AudioContextClass();
-        state.audio.buffer = createPageFlipBuffer(state.audio.context);
+      if (!url) {
+        state.audio.element = null;
+        return;
       }
 
-      if (state.audio.context.state === "suspended") {
-        try {
-          await state.audio.context.resume();
-        } catch (_) {}
-      }
+      const audio = new Audio(url);
+      audio.preload = "auto";
+      audio.volume = CONFIG.flipSoundVolume;
+      audio.playsInline = true;
 
-      return state.audio.context;
+      // Missing sound must never break the flipbook itself.
+      audio.addEventListener("error", () => {
+        console.warn("Page flip MP3 could not be loaded:", url);
+      });
+
+      state.audio.element = audio;
+
+      try {
+        audio.load();
+      } catch (_) {}
+    }
+
+    function primePageFlipAudio() {
+      if (!state.audio.enabled || !state.audio.element || state.audio.primed) return;
+
+      const audio = state.audio.element;
+      const originalVolume = audio.volume;
+
+      // Prime from an actual user gesture so later page-turn playback is reliable.
+      audio.volume = 0;
+      audio.currentTime = 0;
+
+      const playPromise = audio.play();
+
+      if (playPromise && typeof playPromise.then === "function") {
+        playPromise.then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.volume = originalVolume;
+          state.audio.primed = true;
+        }).catch(() => {
+          audio.volume = originalVolume;
+        });
+      } else {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = originalVolume;
+        state.audio.primed = true;
+      }
     }
 
     function playPageFlipSound() {
-      if (!state.audio.enabled || state.zoom > 1.001) return;
+      if (!state.audio.enabled || state.zoom > 1.001 || !state.audio.element) return;
 
       const now = performance.now();
       if (now - state.audio.lastPlayedAt < 180) return;
       state.audio.lastPlayedAt = now;
 
-      unlockAudio().then((context) => {
-        if (!context || context.state !== "running" || !state.audio.buffer) return;
+      const audio = state.audio.element;
 
-        const source = context.createBufferSource();
-        const filter = context.createBiquadFilter();
-        const gain = context.createGain();
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = CONFIG.flipSoundVolume;
 
-        source.buffer = state.audio.buffer;
-        source.playbackRate.value = 0.94 + Math.random() * 0.12;
-
-        filter.type = "bandpass";
-        filter.frequency.value = 1750 + Math.random() * 450;
-        filter.Q.value = 0.72;
-
-        const start = context.currentTime;
-        gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.exponentialRampToValueAtTime(0.11, start + 0.025);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.24);
-
-        source.connect(filter);
-        filter.connect(gain);
-        gain.connect(context.destination);
-
-        source.start(start);
-        source.stop(start + 0.28);
-      }).catch(() => {});
+        const playPromise = audio.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch(() => {});
+        }
+      } catch (_) {}
     }
 
     function updateSoundButton() {
@@ -898,17 +910,24 @@
         : "Page turn sound is off";
     }
 
-    async function toggleSound() {
+    function toggleSound() {
       state.audio.enabled = !state.audio.enabled;
 
       try {
         localStorage.setItem("flipbook-sound", state.audio.enabled ? "1" : "0");
       } catch (_) {}
 
+      if (!state.audio.enabled && state.audio.element) {
+        try {
+          state.audio.element.pause();
+          state.audio.element.currentTime = 0;
+        } catch (_) {}
+      }
+
       updateSoundButton();
 
       if (state.audio.enabled) {
-        await unlockAudio();
+        primePageFlipAudio();
         showStatus("Page turn sound on");
       } else {
         showStatus("Page turn sound off");
@@ -1787,13 +1806,13 @@
       els.resetZoomBtn.addEventListener("click", resetZoom);
       els.soundBtn.addEventListener("click", toggleSound);
 
-      // Browsers require audio to be unlocked by a user gesture.
+      // Prime the MP3 on the first real user interaction for browser audio policies.
       document.addEventListener("pointerdown", () => {
-        if (state.audio.enabled) unlockAudio().catch(() => {});
+        primePageFlipAudio();
       }, { passive: true });
 
       document.addEventListener("keydown", () => {
-        if (state.audio.enabled) unlockAudio().catch(() => {});
+        primePageFlipAudio();
       });
 
       els.fitBtn.addEventListener("click", () => {
@@ -1942,8 +1961,11 @@
         clearCache();
         destroyFlipbook();
 
-        if (state.audio.context && typeof state.audio.context.close === "function") {
-          state.audio.context.close().catch(() => {});
+        if (state.audio.element) {
+          try {
+            state.audio.element.pause();
+            state.audio.element.src = "";
+          } catch (_) {}
         }
 
         if (state.pdfDoc && typeof state.pdfDoc.destroy === "function") {
@@ -1957,6 +1979,7 @@
         setupLibraries();
         applyBranding();
         applySettingsFromQuery();
+        initPageFlipAudio();
 
         state.pdfUrl = resolvePdfUrl();
 
