@@ -211,6 +211,7 @@
 
     .viewer.is-zoomed #book,
     .viewer.is-zoomed #book * {
+      pointer-events: none !important;
       cursor: grab !important;
     }
 
@@ -1432,12 +1433,12 @@
       const atEnd = safePage >= state.totalPages;
       const readMode = state.zoom > 1.001;
 
-      els.prevBtn.disabled = readMode || atStart;
-      els.firstBtn.disabled = readMode || atStart;
-      els.sidePrev.disabled = readMode || atStart;
-      els.nextBtn.disabled = readMode || atEnd;
-      els.lastBtn.disabled = readMode || atEnd;
-      els.sideNext.disabled = readMode || atEnd;
+      els.prevBtn.disabled = atStart;
+      els.firstBtn.disabled = atStart;
+      els.sidePrev.disabled = atStart;
+      els.nextBtn.disabled = atEnd;
+      els.lastBtn.disabled = atEnd;
+      els.sideNext.disabled = atEnd;
       els.pageRange.disabled = readMode;
 
       if (renderNow && state.isReady) {
@@ -1642,7 +1643,7 @@
     }
 
     async function nextPage() {
-      if (!state.turnReady || !state.isReady || state.isTurning || state.zoom > 1.001) return;
+      if (!state.turnReady || !state.isReady || state.isTurning) return;
 
       await prepareDirection(1);
 
@@ -1652,7 +1653,7 @@
     }
 
     async function prevPage() {
-      if (!state.turnReady || !state.isReady || state.isTurning || state.zoom > 1.001) return;
+      if (!state.turnReady || !state.isReady || state.isTurning) return;
 
       await prepareDirection(-1);
 
@@ -1662,7 +1663,7 @@
     }
 
     async function goToPage(index) {
-      if (!state.turnReady || !state.isReady || state.isTurning || state.zoom > 1.001) return;
+      if (!state.turnReady || !state.isReady || state.isTurning) return;
 
       const safe = clamp(index, 0, state.totalPages - 1);
       const candidates = [safe];
@@ -1678,10 +1679,12 @@
     }
 
     function setTurnLocked(locked) {
+      // Manual page-turn interaction is blocked with pointer-events while zoomed.
+      // Keep the Turn.js engine enabled so toolbar/arrow navigation still works.
       if (!state.turnReady) return;
 
       try {
-        window.jQuery(els.book).turn("disable", !!locked);
+        window.jQuery(els.book).turn("disable", false);
       } catch (_) {}
     }
 
@@ -1699,12 +1702,13 @@
       const atStart = safePage <= 1;
       const atEnd = safePage >= state.totalPages;
 
-      els.prevBtn.disabled = readMode || atStart;
-      els.firstBtn.disabled = readMode || atStart;
-      els.sidePrev.disabled = readMode || atStart;
-      els.nextBtn.disabled = readMode || atEnd;
-      els.lastBtn.disabled = readMode || atEnd;
-      els.sideNext.disabled = readMode || atEnd;
+      // Zoom/read mode blocks direct page gestures, not toolbar navigation.
+      els.prevBtn.disabled = atStart;
+      els.firstBtn.disabled = atStart;
+      els.sidePrev.disabled = atStart;
+      els.nextBtn.disabled = atEnd;
+      els.lastBtn.disabled = atEnd;
+      els.sideNext.disabled = atEnd;
       els.pageRange.disabled = readMode;
     }
 
