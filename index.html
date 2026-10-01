@@ -214,10 +214,14 @@
 
     .page {
       position: relative;
-      background: #fff;
+      background: #fff !important;
       overflow: hidden;
       display: grid;
       place-items: center;
+      isolation: isolate;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      transform: translateZ(0);
     }
 
     .page::before {
@@ -240,10 +244,28 @@
       pointer-events: none;
       -webkit-user-drag: none;
       opacity: 0;
-      transition: opacity 0.18s ease;
+      background: #fff;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      transform: translateZ(0);
+      transition: none;
     }
 
     .page.is-rendered .pdf-img { opacity: 1; }
+
+    /* Keep PageFlip's moving sheet layers opaque. This prevents the page below
+       from bleeding through during reverse / previous-page turns. */
+    #book .stf__item,
+    #book .stf__block,
+    #book .stf__page {
+      background-color: #fff !important;
+    }
+
+    #book .stf__item .page,
+    #book .stf__block .page,
+    #book .stf__page .page {
+      background-color: #fff !important;
+    }
 
     .page-status {
       position: absolute;
@@ -753,6 +775,7 @@
       renderPromises: new Map(),
       renderJobId: 0,
       isReady: false,
+      isFlipping: false,
       resizeTimer: null,
       rangeTimer: null,
       statusTimer: null,
@@ -949,7 +972,7 @@
     function getPrefetchIndices(index = state.currentPage) {
       const visible = getVisibleIndices(index);
       const pages = new Set(visible);
-      const range = state.settings.prefetchRange;
+      const range = Math.max(state.settings.prefetchRange, isMobile() ? 1 : 2);
 
       visible.forEach((pageIndex) => {
         for (let offset = 1; offset <= range; offset++) {
@@ -994,6 +1017,7 @@
         state.pageFlip.destroy();
       }
       state.pageFlip = null;
+      state.isFlipping = false;
       state.pageElements = [];
       els.book.innerHTML = "";
     }
@@ -1046,7 +1070,11 @@
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const renderTask = page.render({ canvasContext: ctx, viewport });
+      const renderTask = page.render({
+        canvasContext: ctx,
+        viewport,
+        background: "rgb(255,255,255)"
+      });
       await renderTask.promise;
 
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
@@ -1241,8 +1269,8 @@
         showCover: false,
         usePortrait: isMobile(),
         drawShadow: true,
-        maxShadowOpacity: 0.55,
-        flippingTime: 720,
+        maxShadowOpacity: 0.28,
+        flippingTime: 680,
         mobileScrollSupport: false,
         startPage: safeStartPage,
         clickEventForward: false,
@@ -1250,8 +1278,20 @@
       });
 
       state.pageFlip.loadFromHTML(els.book.querySelectorAll(".page"));
-      state.pageFlip.on("flip", (event) => syncPage(event.data));
-      state.pageFlip.on("changeOrientation", () => syncPage(state.currentPage));
+
+      state.pageFlip.on("changeState", (event) => {
+        state.isFlipping = String(event.data || "").toLowerCase() === "flipping";
+      });
+
+      state.pageFlip.on("flip", (event) => {
+        state.isFlipping = false;
+        syncPage(event.data);
+      });
+
+      state.pageFlip.on("changeOrientation", () => {
+        state.isFlipping = false;
+        syncPage(state.currentPage);
+      });
 
       window.setTimeout(() => {
         if (state.pageFlip && safeStartPage > 0) state.pageFlip.turnToPage(safeStartPage);
@@ -1321,18 +1361,52 @@
       }
     }
 
-    function nextPage() {
-      if (!state.pageFlip || !state.isReady) return;
-      state.pageFlip.flipNext();
+    async function preparePhysicalFlip(direction) {
+      const current = state.currentPage;
+      const candidates = isMobile()
+        ? [current, current + direction]
+        : direction > 0
+          ? [current, current + 1, current + 2, current + 3]
+          : [current - 2, current - 1, current, current + 1];
+
+      const valid = Array.from(new Set(candidates))
+        .filter((index) => index >= 0 && index < state.totalPages);
+
+      await Promise.all(
+        valid.map((index) =>
+          ensurePageRendered(index, { priority: false }).catch(() => null)
+        )
+      );
     }
 
-    function prevPage() {
-      if (!state.pageFlip || !state.isReady) return;
-      state.pageFlip.flipPrev();
+    async function nextPage() {
+      if (!state.pageFlip || !state.isReady || state.isFlipping) return;
+
+      state.isFlipping = true;
+      try {
+        await preparePhysicalFlip(1);
+        state.pageFlip.flipNext("top");
+      } catch (error) {
+        state.isFlipping = false;
+        console.warn(error);
+      }
+    }
+
+    async function prevPage() {
+      if (!state.pageFlip || !state.isReady || state.isFlipping) return;
+
+      state.isFlipping = true;
+      try {
+        await preparePhysicalFlip(-1);
+        state.pageFlip.flipPrev("top");
+      } catch (error) {
+        state.isFlipping = false;
+        console.warn(error);
+      }
     }
 
     function goToPage(index) {
-      if (!state.pageFlip || !state.isReady) return;
+      if (!state.pageFlip || !state.isReady || state.isFlipping) return;
       const safe = clamp(index, 0, state.totalPages - 1);
       syncPage(safe);
       state.pageFlip.turnToPage(safe);
