@@ -598,6 +598,9 @@
       top: 0;
       left: 0;
       transform-origin: top left;
+      transform-style: preserve-3d;
+      perspective: 1600px;
+      -webkit-perspective: 1600px;
       will-change: transform;
     }
 
@@ -608,15 +611,65 @@
       overflow: hidden;
       background: #fff;
       box-shadow: var(--shadow);
-      transform: translate3d(0,0,0);
-      transition: transform 0.18s ease, opacity 0.18s ease;
-      will-change: transform, opacity;
+      transform: perspective(1600px) rotateY(0deg) translate3d(0,0,0);
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      transition:
+        transform 0.28s cubic-bezier(.22,.75,.25,1),
+        box-shadow 0.28s ease,
+        opacity 0.20s ease;
+      will-change: transform, opacity, box-shadow;
       user-select: none;
       -webkit-user-select: none;
     }
 
+    .mobile-page-card::after {
+      content: "";
+      position: absolute;
+      z-index: 6;
+      top: 0;
+      bottom: 0;
+      width: 28%;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.12s ease;
+    }
+
+    .mobile-page-card.turn-forward {
+      transform-origin: left center;
+    }
+
+    .mobile-page-card.turn-forward::after {
+      right: 0;
+      background: linear-gradient(
+        to left,
+        rgba(15,23,42,.34),
+        rgba(15,23,42,.10) 45%,
+        transparent
+      );
+    }
+
+    .mobile-page-card.turn-backward {
+      transform-origin: right center;
+    }
+
+    .mobile-page-card.turn-backward::after {
+      left: 0;
+      background: linear-gradient(
+        to right,
+        rgba(15,23,42,.34),
+        rgba(15,23,42,.10) 45%,
+        transparent
+      );
+    }
+
     .mobile-page-card.is-dragging {
       transition: none;
+    }
+
+    .mobile-page-card.is-dragging::after {
+      opacity: var(--mobile-fold-shadow, .5);
     }
 
     .mobile-page-img {
@@ -1790,7 +1843,13 @@
       els.mobileStage.removeAttribute("style");
       els.mobilePageWrap.removeAttribute("style");
       els.mobilePageCard.removeAttribute("style");
-      els.mobilePageCard.classList.remove("is-rendered", "is-loading", "is-dragging");
+      els.mobilePageCard.classList.remove(
+        "is-rendered",
+        "is-loading",
+        "is-dragging",
+        "turn-forward",
+        "turn-backward"
+      );
       els.mobilePageImg.removeAttribute("src");
       els.mobilePageImg.alt = "";
       els.mobilePageStatusText.textContent = "Loading page...";
@@ -1883,27 +1942,60 @@
 
     function animateMobileArrival(direction) {
       const card = els.mobilePageCard;
-      const offset = direction > 0 ? 28 : direction < 0 ? -28 : 0;
+      const forward = direction > 0;
+      const backward = direction < 0;
 
-      card.classList.remove("is-dragging");
+      card.classList.remove("is-dragging", "turn-forward", "turn-backward");
+      if (forward) card.classList.add("turn-forward");
+      if (backward) card.classList.add("turn-backward");
+
+      const startAngle = forward ? 18 : backward ? -18 : 0;
+      const startX = forward ? 10 : backward ? -10 : 0;
+
       card.style.transition = "none";
-      card.style.transform = "translate3d(" + offset + "px,0,0)";
-      card.style.opacity = "0.82";
+      card.style.transform =
+        "perspective(1600px) rotateY(" + startAngle + "deg) translate3d(" +
+        startX + "px,0,0)";
+      card.style.opacity = "0.88";
+      card.style.boxShadow = "0 24px 60px rgba(0,0,0,.28)";
+      card.style.setProperty("--mobile-fold-shadow", ".34");
 
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
-          card.style.transition = "transform 0.18s ease, opacity 0.18s ease";
-          card.style.transform = "translate3d(0,0,0)";
+          card.style.transition =
+            "transform 0.30s cubic-bezier(.22,.75,.25,1), " +
+            "box-shadow 0.30s ease, opacity 0.22s ease";
+          card.style.transform =
+            "perspective(1600px) rotateY(0deg) translate3d(0,0,0)";
           card.style.opacity = "1";
+          card.style.boxShadow = "var(--shadow)";
+          card.style.setProperty("--mobile-fold-shadow", "0");
+
+          window.setTimeout(() => {
+            card.classList.remove("turn-forward", "turn-backward");
+            card.style.removeProperty("--mobile-fold-shadow");
+          }, 330);
         });
       });
     }
 
     function resetMobileDragVisual() {
-      els.mobilePageCard.classList.remove("is-dragging");
-      els.mobilePageCard.style.transition = "transform 0.16s ease, opacity 0.16s ease";
-      els.mobilePageCard.style.transform = "translate3d(0,0,0)";
-      els.mobilePageCard.style.opacity = "1";
+      const card = els.mobilePageCard;
+
+      card.classList.remove("is-dragging");
+      card.style.transition =
+        "transform 0.24s cubic-bezier(.22,.75,.25,1), " +
+        "box-shadow 0.24s ease, opacity 0.18s ease";
+      card.style.transform =
+        "perspective(1600px) rotateY(0deg) translate3d(0,0,0)";
+      card.style.opacity = "1";
+      card.style.boxShadow = "var(--shadow)";
+      card.style.setProperty("--mobile-fold-shadow", "0");
+
+      window.setTimeout(() => {
+        card.classList.remove("turn-forward", "turn-backward");
+        card.style.removeProperty("--mobile-fold-shadow");
+      }, 260);
     }
 
     function mobileGoToPage(index) {
@@ -2099,11 +2191,35 @@
       event.preventDefault();
 
       const width = Math.max(1, state.mobile.baseWidth || els.mobilePageCard.offsetWidth || 1);
-      const limited = clamp(dx, -width * 0.42, width * 0.42);
-      const opacity = Math.max(0.72, 1 - Math.abs(limited) / width * 0.35);
+      const limited = clamp(dx, -width * 0.72, width * 0.72);
+      const progress = Math.min(1, Math.abs(limited) / (width * 0.72));
+      const forward = limited < 0;
 
-      els.mobilePageCard.style.transform = "translate3d(" + limited + "px,0,0)";
-      els.mobilePageCard.style.opacity = String(opacity);
+      els.mobilePageCard.classList.toggle("turn-forward", forward);
+      els.mobilePageCard.classList.toggle("turn-backward", !forward);
+
+      // A restrained 3D book-page turn that follows the finger.
+      // Forward swipe rotates around the left edge; backward around the right.
+      const angle = forward
+        ? -Math.min(72, progress * 72)
+        : Math.min(72, progress * 72);
+
+      const translateX = limited * 0.16;
+      const lift = Math.sin(progress * Math.PI) * 3;
+      const shadow = Math.min(0.72, 0.12 + progress * 0.60);
+
+      els.mobilePageCard.style.transform =
+        "perspective(1600px) rotateY(" + angle + "deg) " +
+        "translate3d(" + translateX + "px," + (-lift) + "px,0)";
+      els.mobilePageCard.style.opacity = String(Math.max(0.82, 1 - progress * 0.14));
+      els.mobilePageCard.style.boxShadow =
+        "0 " + (22 + Math.round(progress * 18)) + "px " +
+        (56 + Math.round(progress * 34)) + "px rgba(0,0,0," +
+        (0.24 + progress * 0.18).toFixed(2) + ")";
+      els.mobilePageCard.style.setProperty(
+        "--mobile-fold-shadow",
+        String(shadow)
+      );
     }
 
     function mobileTouchEnd(event) {
