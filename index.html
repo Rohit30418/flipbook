@@ -786,10 +786,12 @@
       renderJobId: 0,
       isReady: false,
       isFlipping: false,
-      pointerGate: {
+      drag: {
         active: false,
-        topZoneRatio: 0.34,
-        sideZoneRatio: 0.22
+        pointerId: null,
+        topZoneRatio: 0.36,
+        sideZoneRatio: 0.24,
+        maxYRatio: 0.42
       },
       resizeTimer: null,
       rangeTimer: null,
@@ -1033,7 +1035,9 @@
       }
       state.pageFlip = null;
       state.isFlipping = false;
-      els.book.classList.remove("is-flipping");
+      state.drag.active = false;
+      state.drag.pointerId = null;
+      els.book.classList.remove("is-flipping", "corner-ready");
       state.pageElements = [];
       els.book.innerHTML = "";
     }
@@ -1288,23 +1292,33 @@
         showCover: false,
         usePortrait: isMobile(),
         drawShadow: true,
-        maxShadowOpacity: 0.30,
-        flippingTime: 720,
+        maxShadowOpacity: 0.34,
+        flippingTime: 760,
         mobileScrollSupport: false,
         startPage: safeStartPage,
         clickEventForward: false,
 
-        // Native PageFlip interaction gives the premium corner-peel feel:
-        // hover corner lift, mouse drag, click turn and touch swipe.
-        useMouseEvents: true,
+        // Pointer handling is driven by our custom controller below.
+        // We still use StPageFlip's native folding math via its public API,
+        // but every drag is constrained to TOP-corner geometry.
+        useMouseEvents: false,
         showPageCorners: true,
-        disableFlipByClick: false
+        disableFlipByClick: true
       });
 
       state.pageFlip.loadFromHTML(els.book.querySelectorAll(".page"));
 
       state.pageFlip.on("changeState", (event) => {
-        state.isFlipping = String(event.data || "").toLowerCase() === "flipping";
+        const mode = String(event.data || "").toLowerCase();
+
+        // user_fold is our live drag; flipping is the release animation.
+        state.isFlipping = mode === "flipping";
+
+        if (mode === "read") {
+          state.drag.active = false;
+          state.drag.pointerId = null;
+          els.book.classList.remove("is-flipping");
+        }
       });
 
       state.pageFlip.on("flip", (event) => {
@@ -1436,44 +1450,140 @@
       state.pageFlip.turnToPage(safe);
     }
 
-    function isInPremiumTurnCorner(event) {
-      if (isMobile()) return true;
-
-      const rect = els.book.getBoundingClientRect();
-      if (!rect.width || !rect.height) return false;
-
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-
-      const topLimit = rect.height * state.pointerGate.topZoneRatio;
-      if (y < 0 || y > topLimit) return false;
-
-      const sideLimit = rect.width * state.pointerGate.sideZoneRatio;
-      const nearLeft = x >= 0 && x <= sideLimit;
-      const nearRight = x >= rect.width - sideLimit && x <= rect.width;
-
-      return nearLeft || nearRight;
+    function getBookInteractionRect() {
+      return els.book.getBoundingClientRect();
     }
 
-    function updateCornerCursor(event) {
-      if (isMobile() || !state.isReady || state.isFlipping) {
-        els.book.classList.remove("corner-ready");
+    function isInsideBookPoint(clientX, clientY) {
+      const rect = getBookInteractionRect();
+      return clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom;
+    }
+
+    function isPremiumCornerPoint(clientX, clientY) {
+      const rect = getBookInteractionRect();
+      if (!rect.width || !rect.height) return false;
+
+      const localX = clientX - rect.left;
+      const localY = clientY - rect.top;
+
+      if (localX < 0 || localX > rect.width || localY < 0 || localY > rect.height) {
+        return false;
+      }
+
+      const topLimit = rect.height * state.drag.topZoneRatio;
+      const sideLimit = rect.width * state.drag.sideZoneRatio;
+
+      return localY <= topLimit &&
+        (localX <= sideLimit || localX >= rect.width - sideLimit);
+    }
+
+    function topConstrainedPoint(clientX, clientY) {
+      const rect = getBookInteractionRect();
+
+      // StPageFlip chooses TOP/BOTTOM from the Y coordinate. Never allow the
+      // controlled pointer to cross the middle of the book, so the engine can
+      // only create a TOP fold regardless of how far the real mouse moves down.
+      const maxY = rect.top + rect.height * state.drag.maxYRatio;
+      const minY = rect.top + 2;
+
+      return {
+        x: clientX,
+        y: clamp(clientY, minY, maxY)
+      };
+    }
+
+    function clearCornerPreview() {
+      if (!state.pageFlip || state.drag.active || state.isFlipping) return;
+
+      const rect = getBookInteractionRect();
+      if (!rect.width || !rect.height) return;
+
+      // Send an interior point so StPageFlip closes any open corner preview.
+      state.pageFlip.userMove({
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height * 0.25
+      }, false);
+
+      els.book.classList.remove("corner-ready");
+    }
+
+    function handleBookPointerMove(event) {
+      if (!state.pageFlip || !state.isReady || state.isFlipping) return;
+
+      const point = topConstrainedPoint(event.clientX, event.clientY);
+
+      if (state.drag.active) {
+        if (state.drag.pointerId !== null && event.pointerId !== state.drag.pointerId) return;
+        event.preventDefault();
+        state.pageFlip.userMove(point, event.pointerType === "touch");
         return;
       }
 
-      els.book.classList.toggle("corner-ready", isInPremiumTurnCorner(event));
+      // Premium hover peel only appears in the real top outer corners.
+      if (event.pointerType === "mouse" && isPremiumCornerPoint(event.clientX, event.clientY)) {
+        els.book.classList.add("corner-ready");
+        state.pageFlip.userMove(point, false);
+      } else if (event.pointerType === "mouse") {
+        clearCornerPreview();
+      }
     }
 
-    function blockBadFlipStart(event) {
-      if (isMobile() || !state.isReady || state.isFlipping) return;
+    function handleBookPointerDown(event) {
+      if (!state.pageFlip || !state.isReady || state.isFlipping) return;
+      if (!isPremiumCornerPoint(event.clientX, event.clientY)) return;
 
-      if (!isInPremiumTurnCorner(event)) {
-        event.preventDefault();
-        event.stopPropagation();
-        if (typeof event.stopImmediatePropagation === "function") {
-          event.stopImmediatePropagation();
-        }
-      }
+      event.preventDefault();
+
+      state.drag.active = true;
+      state.drag.pointerId = event.pointerId;
+      els.book.classList.add("is-flipping", "corner-ready");
+
+      try {
+        els.viewer.setPointerCapture(event.pointerId);
+      } catch (_) {}
+
+      state.pageFlip.startUserTouch(
+        topConstrainedPoint(event.clientX, event.clientY)
+      );
+    }
+
+    function handleBookPointerUp(event) {
+      if (!state.pageFlip || !state.drag.active) return;
+      if (state.drag.pointerId !== null && event.pointerId !== state.drag.pointerId) return;
+
+      event.preventDefault();
+
+      const point = topConstrainedPoint(event.clientX, event.clientY);
+      state.pageFlip.userStop(point, false);
+
+      try {
+        els.viewer.releasePointerCapture(event.pointerId);
+      } catch (_) {}
+
+      state.drag.active = false;
+      state.drag.pointerId = null;
+      els.book.classList.remove("is-flipping", "corner-ready");
+    }
+
+    function handleBookPointerCancel(event) {
+      if (!state.drag.active) return;
+
+      const rect = getBookInteractionRect();
+      const point = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + Math.max(2, rect.height * 0.2)
+      };
+
+      try {
+        if (state.pageFlip) state.pageFlip.userStop(point, false);
+      } catch (_) {}
+
+      state.drag.active = false;
+      state.drag.pointerId = null;
+      els.book.classList.remove("is-flipping", "corner-ready");
     }
 
     function distanceBetweenTouches(touchA, touchB) {
@@ -1488,13 +1598,15 @@
       els.nextBtn.addEventListener("click", nextPage);
       els.sideNext.addEventListener("click", nextPage);
 
-      // Premium desktop interaction:
-      // native PageFlip drag/curl is allowed only from the TOP outer corners.
-      // This keeps the original smooth peel but eliminates the giant bottom flap.
-      els.book.addEventListener("mousemove", updateCornerCursor, true);
-      els.book.addEventListener("mouseleave", () => els.book.classList.remove("corner-ready"), true);
-      els.book.addEventListener("mousedown", blockBadFlipStart, true);
-      els.book.addEventListener("pointerdown", blockBadFlipStart, true);
+      // Premium page interaction: custom controller drives StPageFlip's public
+      // fold API while constraining Y to TOP-corner geometry.
+      els.viewer.addEventListener("pointermove", handleBookPointerMove, { passive: false });
+      els.viewer.addEventListener("pointerdown", handleBookPointerDown, { passive: false });
+      els.viewer.addEventListener("pointerup", handleBookPointerUp, { passive: false });
+      els.viewer.addEventListener("pointercancel", handleBookPointerCancel, { passive: false });
+      els.viewer.addEventListener("pointerleave", (event) => {
+        if (!state.drag.active) clearCornerPreview();
+      }, { passive: true });
 
       els.firstBtn.addEventListener("click", () => goToPage(0));
       els.lastBtn.addEventListener("click", () => goToPage(state.totalPages - 1));
