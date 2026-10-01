@@ -583,6 +583,127 @@
       line-height: 1.5;
     }
 
+    /* Dedicated mobile viewer.
+       Desktop continues to use #book + Turn.js unchanged. */
+    .mobile-stage {
+      display: none;
+      position: relative;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mobile-page-wrap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: top left;
+      will-change: transform;
+    }
+
+    .mobile-page-card {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: var(--shadow);
+      transform: translate3d(0,0,0);
+      transition: transform 0.18s ease, opacity 0.18s ease;
+      will-change: transform, opacity;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .mobile-page-card.is-dragging {
+      transition: none;
+    }
+
+    .mobile-page-img {
+      position: relative;
+      z-index: 2;
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #fff;
+      pointer-events: none;
+      -webkit-user-drag: none;
+      opacity: 0;
+      transition: opacity 0.12s ease;
+    }
+
+    .mobile-page-card.is-rendered .mobile-page-img {
+      opacity: 1;
+    }
+
+    .mobile-page-status {
+      position: absolute;
+      z-index: 3;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: #475569;
+      background: linear-gradient(135deg, #fff, #f8fafc);
+      text-align: center;
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .mobile-page-card.is-rendered .mobile-page-status {
+      display: none;
+    }
+
+    .mobile-page-status span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+    }
+
+    .mobile-page-card.is-loading .mobile-page-status span::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid #cbd5e1;
+      border-top-color: var(--brand);
+      animation: spin 0.8s linear infinite;
+    }
+
+    @media (max-width: 760px) {
+      #bookStage {
+        display: none !important;
+      }
+
+      .mobile-stage {
+        display: block;
+        touch-action: none;
+        -ms-touch-action: none;
+      }
+
+      .viewer:not(.is-zoomed) {
+        overflow: hidden;
+      }
+
+      .viewer.is-zoomed .mobile-stage,
+      .viewer.is-zoomed .mobile-page-wrap,
+      .viewer.is-zoomed .mobile-page-card {
+        touch-action: pan-x pan-y;
+        -ms-touch-action: pan-x pan-y;
+      }
+    }
+
+    @media (min-width: 761px) {
+      .mobile-stage {
+        display: none !important;
+      }
+    }
+
     @media (max-width: 980px) {
       :root { --toolbar-height: 108px; }
       .viewer { padding: 10px 10px calc(var(--toolbar-height) + 8px); }
@@ -623,6 +744,17 @@
       <div class="book-stage" id="bookStage">
         <div class="book-wrap" id="bookWrap">
           <div id="book"></div>
+        </div>
+      </div>
+
+      <div class="mobile-stage" id="mobileStage" aria-hidden="true">
+        <div class="mobile-page-wrap" id="mobilePageWrap">
+          <div class="mobile-page-card" id="mobilePageCard">
+            <img class="mobile-page-img" id="mobilePageImg" alt="" draggable="false" />
+            <div class="mobile-page-status" id="mobilePageStatus">
+              <span id="mobilePageStatusText">Loading page...</span>
+            </div>
+          </div>
         </div>
       </div>
     </main>
@@ -740,6 +872,12 @@
       book: document.getElementById("book"),
       bookStage: document.getElementById("bookStage"),
       bookWrap: document.getElementById("bookWrap"),
+      mobileStage: document.getElementById("mobileStage"),
+      mobilePageWrap: document.getElementById("mobilePageWrap"),
+      mobilePageCard: document.getElementById("mobilePageCard"),
+      mobilePageImg: document.getElementById("mobilePageImg"),
+      mobilePageStatus: document.getElementById("mobilePageStatus"),
+      mobilePageStatusText: document.getElementById("mobilePageStatusText"),
       viewer: document.getElementById("viewer"),
       loader: document.getElementById("loader"),
       loaderTitle: document.getElementById("loaderTitle"),
@@ -793,6 +931,19 @@
       isReady: false,
       forwardLocked: false,
       pendingForwardLock: false,
+      mobile: {
+        active: false,
+        baseWidth: 0,
+        baseHeight: 0,
+        touchActive: false,
+        dragging: false,
+        startX: 0,
+        startY: 0,
+        lastX: 0,
+        lastY: 0,
+        dx: 0,
+        dy: 0
+      },
       resizeTimer: null,
       rangeTimer: null,
       statusTimer: null,
@@ -1316,6 +1467,12 @@
       for (let index = 0; index < state.totalPages; index++) {
         clearPageImage(index);
       }
+
+      if (els.mobilePageImg) {
+        els.mobilePageImg.removeAttribute("src");
+        els.mobilePageCard.classList.remove("is-rendered", "is-loading", "is-dragging");
+        els.mobilePageStatusText.textContent = "Loading page...";
+      }
     }
 
     function evictCache() {
@@ -1622,6 +1779,377 @@
       return page;
     }
 
+    function destroyMobileViewer() {
+      state.mobile.active = false;
+      state.mobile.touchActive = false;
+      state.mobile.dragging = false;
+      state.mobile.dx = 0;
+      state.mobile.dy = 0;
+
+      els.mobileStage.setAttribute("aria-hidden", "true");
+      els.mobileStage.removeAttribute("style");
+      els.mobilePageWrap.removeAttribute("style");
+      els.mobilePageCard.removeAttribute("style");
+      els.mobilePageCard.classList.remove("is-rendered", "is-loading", "is-dragging");
+      els.mobilePageImg.removeAttribute("src");
+      els.mobilePageImg.alt = "";
+      els.mobilePageStatusText.textContent = "Loading page...";
+    }
+
+    function layoutMobileViewer() {
+      if (!state.mobile.active) return;
+
+      const size = getBookSize();
+      state.mobile.baseWidth = size.pageWidth;
+      state.mobile.baseHeight = size.pageHeight;
+
+      const scaledWidth = Math.round(size.pageWidth * state.zoom);
+      const scaledHeight = Math.round(size.pageHeight * state.zoom);
+
+      els.mobileStage.style.width = scaledWidth + "px";
+      els.mobileStage.style.height = scaledHeight + "px";
+      els.mobilePageWrap.style.width = size.pageWidth + "px";
+      els.mobilePageWrap.style.height = size.pageHeight + "px";
+      els.mobilePageWrap.style.transform = "scale(" + state.zoom + ")";
+      els.mobilePageCard.style.width = size.pageWidth + "px";
+      els.mobilePageCard.style.height = size.pageHeight + "px";
+    }
+
+    function syncMobilePageMeta(index) {
+      const safe = clamp(index, 0, Math.max(0, state.totalPages - 1));
+
+      state.currentPage = safe;
+      state.visibleIndices = [safe];
+      syncShareUrl(safe + 1);
+
+      els.pageRange.value = String(safe);
+      els.pageText.textContent = (safe + 1) + " / " + state.totalPages;
+      els.mobilePageImg.alt = "PDF page " + (safe + 1);
+    }
+
+    function setMobileLoadingVisual(index, keepExisting) {
+      if (!keepExisting) {
+        els.mobilePageImg.removeAttribute("src");
+        els.mobilePageCard.classList.remove("is-rendered");
+      }
+
+      els.mobilePageCard.classList.add("is-loading");
+      els.mobilePageStatusText.textContent = "Loading page " + (index + 1);
+    }
+
+    function setMobileRenderedVisual(index, url) {
+      if (!state.mobile.active || state.currentPage !== index) return;
+
+      els.mobilePageImg.src = url;
+      els.mobilePageCard.classList.remove("is-loading");
+      els.mobilePageCard.classList.add("is-rendered");
+      els.mobilePageStatusText.textContent = "Page " + (index + 1);
+    }
+
+    async function renderMobileCurrentPage(priority = false, keepExisting = false) {
+      if (!state.mobile.active || !state.pdfDoc) return null;
+
+      const index = state.currentPage;
+      const cached = state.pageCache.get(index);
+
+      if (cached && cached.key === getRenderKey()) {
+        setMobileRenderedVisual(index, cached.url);
+        refreshNavigationAvailability();
+        return cached.url;
+      }
+
+      setMobileLoadingVisual(index, keepExisting);
+
+      try {
+        const url = await ensurePageRendered(index, { priority: !!priority });
+
+        if (state.mobile.active && state.currentPage === index && url) {
+          setMobileRenderedVisual(index, url);
+          state.forwardLocked = false;
+          state.pendingForwardLock = false;
+          refreshNavigationAvailability();
+          schedulePrefetch();
+        }
+
+        return url;
+      } catch (error) {
+        if (state.mobile.active && state.currentPage === index) {
+          els.mobilePageCard.classList.remove("is-loading", "is-rendered");
+          els.mobilePageStatusText.textContent = "Page failed to load";
+        }
+        throw error;
+      }
+    }
+
+    function animateMobileArrival(direction) {
+      const card = els.mobilePageCard;
+      const offset = direction > 0 ? 28 : direction < 0 ? -28 : 0;
+
+      card.classList.remove("is-dragging");
+      card.style.transition = "none";
+      card.style.transform = "translate3d(" + offset + "px,0,0)";
+      card.style.opacity = "0.82";
+
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          card.style.transition = "transform 0.18s ease, opacity 0.18s ease";
+          card.style.transform = "translate3d(0,0,0)";
+          card.style.opacity = "1";
+        });
+      });
+    }
+
+    function resetMobileDragVisual() {
+      els.mobilePageCard.classList.remove("is-dragging");
+      els.mobilePageCard.style.transition = "transform 0.16s ease, opacity 0.16s ease";
+      els.mobilePageCard.style.transform = "translate3d(0,0,0)";
+      els.mobilePageCard.style.opacity = "1";
+    }
+
+    function mobileGoToPage(index) {
+      if (!state.mobile.active || !state.isReady) return false;
+
+      const safe = clamp(index, 0, state.totalPages - 1);
+      const previous = state.currentPage;
+
+      if (safe === previous) {
+        resetMobileDragVisual();
+        return false;
+      }
+
+      const movingForward = safe > previous;
+
+      if (movingForward && state.forwardLocked) {
+        showSpreadLoadingStatus();
+        resetMobileDragVisual();
+        refreshNavigationAvailability();
+        return false;
+      }
+
+      syncMobilePageMeta(safe);
+
+      const ready = isPageRenderReady(safe);
+      state.forwardLocked = !ready;
+      state.pendingForwardLock = false;
+
+      const cached = state.pageCache.get(safe);
+      if (cached && cached.key === getRenderKey()) {
+        setMobileRenderedVisual(safe, cached.url);
+        state.forwardLocked = false;
+      } else {
+        setMobileLoadingVisual(safe, false);
+      }
+
+      playPageFlipSound();
+      animateMobileArrival(movingForward ? 1 : -1);
+      refreshNavigationAvailability();
+
+      renderMobileCurrentPage(false, false).catch((error) => {
+        console.error(error);
+      });
+
+      return true;
+    }
+
+    function mobileNextPage() {
+      if (!state.mobile.active || !state.isReady) return false;
+
+      if (state.forwardLocked) {
+        showSpreadLoadingStatus();
+        resetMobileDragVisual();
+        refreshNavigationAvailability();
+        return false;
+      }
+
+      if (state.currentPage >= state.totalPages - 1) {
+        resetMobileDragVisual();
+        return false;
+      }
+
+      return mobileGoToPage(state.currentPage + 1);
+    }
+
+    function mobilePrevPage() {
+      if (!state.mobile.active || !state.isReady) return false;
+
+      if (state.currentPage <= 0) {
+        resetMobileDragVisual();
+        return false;
+      }
+
+      return mobileGoToPage(state.currentPage - 1);
+    }
+
+    function buildMobileViewer(startPage = 0) {
+      destroyFlipbook();
+
+      state.mobile.active = true;
+      state.forwardLocked = false;
+      state.pendingForwardLock = false;
+      state.zoom = 1;
+
+      const safe = clamp(startPage, 0, Math.max(0, state.totalPages - 1));
+
+      els.bookStage.setAttribute("aria-hidden", "true");
+      els.mobileStage.setAttribute("aria-hidden", "false");
+      els.viewer.classList.remove("is-zoomed", "is-panning");
+
+      syncMobilePageMeta(safe);
+      layoutMobileViewer();
+      setMobileLoadingVisual(safe, false);
+      syncZoomControls();
+    }
+
+    function applyMobileZoom() {
+      if (!state.mobile.active) return;
+
+      const viewer = els.viewer;
+      const wasReadMode = viewer.classList.contains("is-zoomed");
+      const oldScrollWidth = Math.max(viewer.scrollWidth, 1);
+      const oldScrollHeight = Math.max(viewer.scrollHeight, 1);
+      const centerXRatio = clamp(
+        (viewer.scrollLeft + viewer.clientWidth / 2) / oldScrollWidth,
+        0,
+        1
+      );
+      const centerYRatio = clamp(
+        (viewer.scrollTop + viewer.clientHeight / 2) / oldScrollHeight,
+        0,
+        1
+      );
+
+      state.zoom = clamp(state.zoom, CONFIG.minZoom, CONFIG.maxZoom);
+      const readMode = state.zoom > 1.001;
+
+      layoutMobileViewer();
+      els.zoomValue.textContent = Math.round(state.zoom * 100) + "%";
+      viewer.classList.toggle("is-zoomed", readMode);
+      syncZoomControls();
+
+      if (!readMode) {
+        state.pan.active = false;
+        state.pan.pointerId = null;
+        viewer.classList.remove("is-panning");
+        viewer.scrollTo({ left: 0, top: 0, behavior: "smooth" });
+      } else {
+        window.requestAnimationFrame(() => {
+          const newScrollWidth = Math.max(viewer.scrollWidth, 1);
+          const newScrollHeight = Math.max(viewer.scrollHeight, 1);
+          const maxLeft = Math.max(0, newScrollWidth - viewer.clientWidth);
+          const maxTop = Math.max(0, newScrollHeight - viewer.clientHeight);
+
+          const targetLeft = !wasReadMode
+            ? maxLeft / 2
+            : centerXRatio * newScrollWidth - viewer.clientWidth / 2;
+          const targetTop = !wasReadMode
+            ? maxTop / 2
+            : centerYRatio * newScrollHeight - viewer.clientHeight / 2;
+
+          viewer.scrollLeft = clamp(targetLeft, 0, maxLeft);
+          viewer.scrollTop = clamp(targetTop, 0, maxTop);
+        });
+      }
+
+      window.clearTimeout(state.zoomRenderTimer);
+      state.zoomRenderTimer = window.setTimeout(() => {
+        if (!state.isReady || !state.mobile.active) return;
+        renderMobileCurrentPage(false, true).catch(() => {});
+      }, 180);
+    }
+
+    function mobileTouchStart(event) {
+      if (!state.mobile.active || state.zoom > 1.001) return;
+      if (!event.touches || event.touches.length !== 1) return;
+
+      const touch = event.touches[0];
+
+      state.mobile.touchActive = true;
+      state.mobile.dragging = false;
+      state.mobile.startX = touch.clientX;
+      state.mobile.startY = touch.clientY;
+      state.mobile.lastX = touch.clientX;
+      state.mobile.lastY = touch.clientY;
+      state.mobile.dx = 0;
+      state.mobile.dy = 0;
+    }
+
+    function mobileTouchMove(event) {
+      if (!state.mobile.active || !state.mobile.touchActive || state.zoom > 1.001) return;
+      if (!event.touches || event.touches.length !== 1) return;
+
+      const touch = event.touches[0];
+      const dx = touch.clientX - state.mobile.startX;
+      const dy = touch.clientY - state.mobile.startY;
+
+      state.mobile.lastX = touch.clientX;
+      state.mobile.lastY = touch.clientY;
+      state.mobile.dx = dx;
+      state.mobile.dy = dy;
+
+      if (!state.mobile.dragging) {
+        if (Math.abs(dx) < 8) return;
+        if (Math.abs(dy) > Math.abs(dx)) {
+          state.mobile.touchActive = false;
+          return;
+        }
+        state.mobile.dragging = true;
+        els.mobilePageCard.classList.add("is-dragging");
+      }
+
+      event.preventDefault();
+
+      const width = Math.max(1, state.mobile.baseWidth || els.mobilePageCard.offsetWidth || 1);
+      const limited = clamp(dx, -width * 0.42, width * 0.42);
+      const opacity = Math.max(0.72, 1 - Math.abs(limited) / width * 0.35);
+
+      els.mobilePageCard.style.transform = "translate3d(" + limited + "px,0,0)";
+      els.mobilePageCard.style.opacity = String(opacity);
+    }
+
+    function mobileTouchEnd(event) {
+      if (!state.mobile.active || !state.mobile.touchActive || state.zoom > 1.001) {
+        state.mobile.touchActive = false;
+        state.mobile.dragging = false;
+        return;
+      }
+
+      if (event.changedTouches && event.changedTouches.length) {
+        state.mobile.lastX = event.changedTouches[0].clientX;
+        state.mobile.lastY = event.changedTouches[0].clientY;
+        state.mobile.dx = state.mobile.lastX - state.mobile.startX;
+        state.mobile.dy = state.mobile.lastY - state.mobile.startY;
+      }
+
+      const dx = state.mobile.dx;
+      const dy = state.mobile.dy;
+      const width = Math.max(1, state.mobile.baseWidth || els.mobilePageCard.offsetWidth || 1);
+      const threshold = Math.min(72, Math.max(42, width * 0.14));
+      const horizontal = Math.abs(dx) > Math.abs(dy) * 1.1;
+
+      state.mobile.touchActive = false;
+      state.mobile.dragging = false;
+
+      if (!horizontal || Math.abs(dx) < threshold) {
+        resetMobileDragVisual();
+        return;
+      }
+
+      // Dedicated mobile rule:
+      // finger moves right -> left = NEXT
+      // finger moves left -> right = PREVIOUS
+      if (dx < 0) {
+        mobileNextPage();
+      } else {
+        mobilePrevPage();
+      }
+    }
+
+    function mobileTouchCancel() {
+      state.mobile.touchActive = false;
+      state.mobile.dragging = false;
+      resetMobileDragVisual();
+    }
+
     function buildFlipbook(startPage = 0) {
       destroyFlipbook();
 
@@ -1773,11 +2301,15 @@
       setControlsDisabled(true);
       showLoader(
         "Opening flipbook",
-        "Loading the PDF and preparing the visible pages."
+        isMobile()
+          ? "Loading the PDF and preparing the mobile viewer."
+          : "Loading the PDF and preparing the visible pages."
       );
       setProgress(8, "Loading PDF...");
 
       try {
+        destroyMobileViewer();
+
         if (state.pdfDoc && typeof state.pdfDoc.destroy === "function") {
           await state.pdfDoc.destroy().catch(() => {});
         }
@@ -1788,36 +2320,58 @@
 
         await loadPdfMeta();
 
-        setProgress(42, "Building premium page-turn viewer...");
-        buildFlipbook(startPage);
+        if (isMobile()) {
+          setProgress(42, "Building mobile PDF viewer...");
+          buildMobileViewer(startPage);
 
-        setProgress(66, "Rendering visible pages...");
-        await renderVisiblePages();
+          setProgress(72, "Rendering current page...");
+          await renderMobileCurrentPage(true, false);
 
-        const warm = getPrefetchIndices();
-        setProgress(84, "Preparing nearby pages...");
-        await renderIndices(warm.slice(0, isMobile() ? 3 : 6), false);
+          setProgress(100, "Ready");
+          state.isReady = true;
+          state.forwardLocked = false;
+          state.pendingForwardLock = false;
 
-        setProgress(100, "Ready");
-        state.isReady = true;
-        state.forwardLocked = false;
-        state.pendingForwardLock = false;
-        syncFromTurn(
-          window.jQuery(els.book).turn("page"),
-          window.jQuery(els.book).turn("view"),
-          true
-        );
-        refreshNavigationAvailability();
-        schedulePrefetch();
+          refreshNavigationAvailability();
+          schedulePrefetch();
+        } else {
+          els.bookStage.removeAttribute("aria-hidden");
+          els.mobileStage.setAttribute("aria-hidden", "true");
+
+          setProgress(42, "Building premium page-turn viewer...");
+          buildFlipbook(startPage);
+
+          setProgress(66, "Rendering visible pages...");
+          await renderVisiblePages();
+
+          const warm = getPrefetchIndices();
+          setProgress(84, "Preparing nearby pages...");
+          await renderIndices(warm.slice(0, 6), false);
+
+          setProgress(100, "Ready");
+          state.isReady = true;
+          state.forwardLocked = false;
+          state.pendingForwardLock = false;
+
+          syncFromTurn(
+            window.jQuery(els.book).turn("page"),
+            window.jQuery(els.book).turn("view"),
+            true
+          );
+          refreshNavigationAvailability();
+          schedulePrefetch();
+        }
 
         window.setTimeout(hideLoader, 220);
       } catch (error) {
         console.error(error);
         state.isReady = false;
+        destroyMobileViewer();
         destroyFlipbook();
         showError(error);
       } finally {
         setControlsDisabled(false);
+        if (state.totalPages) refreshNavigationAvailability();
       }
     }
 
@@ -1851,7 +2405,7 @@
       renderIndices(Array.from(candidates), false).catch(() => {});
     }
 
-    function nextPage() {
+    function desktopNextPage() {
       if (!state.turnReady || !state.isReady || isBookActuallyAnimating()) return;
 
       if (state.forwardLocked) {
@@ -1880,7 +2434,7 @@
       }
     }
 
-    function prevPage() {
+    function desktopPrevPage() {
       if (!state.turnReady || !state.isReady || isBookActuallyAnimating()) return;
 
       try {
@@ -1899,7 +2453,7 @@
       }
     }
 
-    function goToPage(index) {
+    function desktopGoToPage(index) {
       if (!state.turnReady || !state.isReady || isBookActuallyAnimating()) return;
 
       const safe = clamp(index, 0, state.totalPages - 1);
@@ -1921,6 +2475,18 @@
       try {
         window.jQuery(els.book).turn("page", safe + 1);
       } catch (_) {}
+    }
+
+    function nextPage() {
+      return state.mobile.active ? mobileNextPage() : desktopNextPage();
+    }
+
+    function prevPage() {
+      return state.mobile.active ? mobilePrevPage() : desktopPrevPage();
+    }
+
+    function goToPage(index) {
+      return state.mobile.active ? mobileGoToPage(index) : desktopGoToPage(index);
     }
 
     function setTurnLocked(locked) {
@@ -2037,20 +2603,28 @@
       }, 180);
     }
 
+    function applyActiveZoom() {
+      if (state.mobile.active) {
+        applyMobileZoom();
+      } else {
+        applyZoom();
+      }
+    }
+
     function zoomIn() {
       state.zoom = Math.min(CONFIG.maxZoom, state.zoom + CONFIG.zoomStep);
-      applyZoom();
+      applyActiveZoom();
     }
 
     function zoomOut() {
       // Never allow zoom-out below the normal fitted 100% view.
       state.zoom = Math.max(CONFIG.minZoom, state.zoom - CONFIG.zoomStep);
-      applyZoom();
+      applyActiveZoom();
     }
 
     function resetZoom() {
       state.zoom = 1;
-      applyZoom();
+      applyActiveZoom();
     }
 
     function startPan(event) {
@@ -2125,6 +2699,12 @@
       els.themeBtn.addEventListener("click", toggleTheme);
       els.shareBtn.addEventListener("click", shareCurrentLink);
 
+      // Dedicated mobile swipe engine. This does not use Turn.js.
+      els.mobileStage.addEventListener("touchstart", mobileTouchStart, { passive: true });
+      els.mobileStage.addEventListener("touchmove", mobileTouchMove, { passive: false });
+      els.mobileStage.addEventListener("touchend", mobileTouchEnd, { passive: true });
+      els.mobileStage.addEventListener("touchcancel", mobileTouchCancel, { passive: true });
+
       // Prime the MP3 on the first real user interaction for browser audio policies.
       document.addEventListener("pointerdown", () => {
         primePageFlipAudio();
@@ -2135,7 +2715,22 @@
       });
 
       els.fitBtn.addEventListener("click", () => {
-        if (!state.isReady || !state.turnReady || isBookActuallyAnimating()) return;
+        if (!state.isReady) return;
+
+        if (state.mobile.active) {
+          state.fitMode = state.fitMode === "width" ? "height" : "width";
+          els.fitBtn.setAttribute("aria-label",
+            state.fitMode === "width" ? "Fit width" : "Fit height");
+          els.fitBtn.title =
+            state.fitMode === "width" ? "Fit width" : "Fit height";
+
+          state.zoom = 1;
+          applyMobileZoom();
+          renderMobileCurrentPage(false, true).catch(() => {});
+          return;
+        }
+
+        if (!state.turnReady || isBookActuallyAnimating()) return;
 
         state.fitMode = state.fitMode === "width" ? "height" : "width";
         els.fitBtn.setAttribute("aria-label",
@@ -2167,7 +2762,13 @@
           state.qualityMode === "ultra" ? "Ultra HD" : "HD";
 
         clearCache();
-        await renderVisiblePages();
+
+        if (state.mobile.active) {
+          await renderMobileCurrentPage(true, false);
+        } else {
+          await renderVisiblePages();
+        }
+
         schedulePrefetch();
         showStatus(state.qualityMode.toUpperCase() + " mode applied");
       });
@@ -2256,7 +2857,7 @@
           state.pinch.startZoom *
           (currentDistance / state.pinch.startDistance);
 
-        applyZoom();
+        applyActiveZoom();
       }, { passive: false });
 
       els.viewer.addEventListener("touchend", () => {
@@ -2267,9 +2868,26 @@
         window.clearTimeout(state.resizeTimer);
 
         state.resizeTimer = window.setTimeout(() => {
-          if (!state.isReady || !state.totalPages || state.isTurning) return;
+          if (!state.isReady || !state.totalPages) return;
 
           const keepPage = state.currentPage;
+          const shouldUseMobile = isMobile();
+
+          // Crossing the breakpoint swaps engines completely.
+          if (shouldUseMobile !== state.mobile.active) {
+            loadFlipbook(keepPage);
+            return;
+          }
+
+          if (state.mobile.active) {
+            layoutMobileViewer();
+            applyMobileZoom();
+            renderMobileCurrentPage(false, true).catch(() => {});
+            return;
+          }
+
+          if (state.isTurning) return;
+
           buildFlipbook(keepPage);
 
           state.pageCache.forEach((entry, index) => {
@@ -2283,6 +2901,7 @@
 
       window.addEventListener("beforeunload", () => {
         clearCache();
+        destroyMobileViewer();
         destroyFlipbook();
 
         if (state.audio.element) {
