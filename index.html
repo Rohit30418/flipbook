@@ -211,8 +211,23 @@
     .viewer.is-zoomed .book-wrap { transform-origin: top left; }
 
     #book {
+      position: relative;
       filter: drop-shadow(var(--shadow));
       cursor: grab;
+
+      /*
+        PageFlip's soft-sheet geometry can extend beyond the book while the
+        corner is folding. The host is the real two-page spread, so clipping
+        here preserves the natural curl but prevents the sheet from flying
+        above/below the book on either next or previous turns.
+      */
+      overflow: hidden !important;
+      contain: paint;
+    }
+
+    #book.stf__parent,
+    #book .stf__wrapper {
+      overflow: hidden !important;
     }
 
     #book:active { cursor: grabbing; }
@@ -265,6 +280,8 @@
     #book .stf__block,
     #book .stf__page {
       background-color: #fff !important;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
 
     #book .stf__item .page,
@@ -1279,8 +1296,8 @@
         showCover: false,
         usePortrait: isMobile(),
         drawShadow: true,
-        maxShadowOpacity: 0.38,
-        flippingTime: 900,
+        maxShadowOpacity: 0.32,
+        flippingTime: 780,
         mobileScrollSupport: false,
         startPage: safeStartPage,
         clickEventForward: false,
