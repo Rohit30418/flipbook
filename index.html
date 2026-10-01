@@ -778,6 +778,7 @@
       renderJobId: 0,
       isReady: false,
       forwardLocked: false,
+      pendingForwardLock: false,
       resizeTimer: null,
       rangeTimer: null,
       statusTimer: null,
@@ -1281,6 +1282,7 @@
       state.turnReady = false;
       state.isTurning = false;
       state.forwardLocked = false;
+      state.pendingForwardLock = false;
       state.visibleIndices = [];
       els.book.innerHTML = "";
       els.book.removeAttribute("style");
@@ -1409,6 +1411,7 @@
       // the user landed on has completely rendered.
       if (state.forwardLocked && spreadReady) {
         state.forwardLocked = false;
+        state.pendingForwardLock = false;
       }
 
       els.prevBtn.disabled = atStart;
@@ -1683,13 +1686,15 @@
             const movingForward = destinationPage - 1 > state.currentPage;
             const destinationVisible = normalizeView(view, destinationPage);
 
-            if (movingForward && !arePagesRenderReady(destinationVisible)) {
-              state.forwardLocked = true;
-            }
+            // IMPORTANT: do not set forwardLocked here. Programmatic Turn.js
+            // navigation fires "turning" before the flip's "start" event. If we
+            // lock here, the start handler cancels this very same allowed turn.
+            state.pendingForwardLock =
+              movingForward && !arePagesRenderReady(destinationVisible);
 
             syncFromTurn(destinationPage, view, false);
-            refreshNavigationAvailability();
 
+            // Begin rendering destination pages in parallel with the animation.
             renderIndices(destinationVisible, false)
               .then(refreshNavigationAvailability)
               .catch(() => refreshNavigationAvailability());
@@ -1697,7 +1702,16 @@
 
           turned: function (event, page, view) {
             state.isTurning = false;
-            syncFromTurn(page, view, true);
+
+            const landedPage = clamp(Number(page || 1), 1, state.totalPages);
+            const landedVisible = normalizeView(view, landedPage);
+
+            state.forwardLocked =
+              state.pendingForwardLock && !arePagesRenderReady(landedVisible);
+            state.pendingForwardLock = false;
+
+            syncFromTurn(landedPage, view, true);
+            refreshNavigationAvailability();
           },
 
           end: function () {
@@ -1773,6 +1787,7 @@
         setProgress(100, "Ready");
         state.isReady = true;
         state.forwardLocked = false;
+        state.pendingForwardLock = false;
         syncFromTurn(
           window.jQuery(els.book).turn("page"),
           window.jQuery(els.book).turn("view"),
@@ -1831,10 +1846,8 @@
         return;
       }
 
-      // Always allow one forward action immediately. If the destination spread
-      // is still rendering, the turning event locks only the NEXT action.
-      prepareDirection(1);
-
+      // Turn FIRST. Destination rendering starts from the Turn.js "turning"
+      // event so PDF work can never delay this allowed click.
       try {
         const $book = window.jQuery(els.book);
         const view = $book.turn("view") || [];
@@ -1855,8 +1868,6 @@
 
     function prevPage() {
       if (!state.turnReady || !state.isReady || isBookActuallyAnimating()) return;
-
-      prepareDirection(-1);
 
       try {
         const $book = window.jQuery(els.book);
