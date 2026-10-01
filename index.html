@@ -213,24 +213,11 @@
     #book {
       position: relative;
       filter: drop-shadow(var(--shadow));
-      cursor: grab;
-
-      /*
-        PageFlip's soft-sheet geometry can extend beyond the book while the
-        corner is folding. The host is the real two-page spread, so clipping
-        here preserves the natural curl but prevents the sheet from flying
-        above/below the book on either next or previous turns.
-      */
-      overflow: hidden !important;
-      contain: paint;
+      cursor: default;
     }
 
-    #book.stf__parent,
-    #book .stf__wrapper {
-      overflow: hidden !important;
-    }
-
-    #book:active { cursor: grabbing; }
+    #book.corner-ready { cursor: grab; }
+    #book.corner-ready:active,
     #book.is-flipping { cursor: grabbing; }
 
     .page {
@@ -799,6 +786,11 @@
       renderJobId: 0,
       isReady: false,
       isFlipping: false,
+      pointerGate: {
+        active: false,
+        topZoneRatio: 0.34,
+        sideZoneRatio: 0.22
+      },
       resizeTimer: null,
       rangeTimer: null,
       statusTimer: null,
@@ -1296,8 +1288,8 @@
         showCover: false,
         usePortrait: isMobile(),
         drawShadow: true,
-        maxShadowOpacity: 0.32,
-        flippingTime: 780,
+        maxShadowOpacity: 0.30,
+        flippingTime: 720,
         mobileScrollSupport: false,
         startPage: safeStartPage,
         clickEventForward: false,
@@ -1444,6 +1436,46 @@
       state.pageFlip.turnToPage(safe);
     }
 
+    function isInPremiumTurnCorner(event) {
+      if (isMobile()) return true;
+
+      const rect = els.book.getBoundingClientRect();
+      if (!rect.width || !rect.height) return false;
+
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      const topLimit = rect.height * state.pointerGate.topZoneRatio;
+      if (y < 0 || y > topLimit) return false;
+
+      const sideLimit = rect.width * state.pointerGate.sideZoneRatio;
+      const nearLeft = x >= 0 && x <= sideLimit;
+      const nearRight = x >= rect.width - sideLimit && x <= rect.width;
+
+      return nearLeft || nearRight;
+    }
+
+    function updateCornerCursor(event) {
+      if (isMobile() || !state.isReady || state.isFlipping) {
+        els.book.classList.remove("corner-ready");
+        return;
+      }
+
+      els.book.classList.toggle("corner-ready", isInPremiumTurnCorner(event));
+    }
+
+    function blockBadFlipStart(event) {
+      if (isMobile() || !state.isReady || state.isFlipping) return;
+
+      if (!isInPremiumTurnCorner(event)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === "function") {
+          event.stopImmediatePropagation();
+        }
+      }
+    }
+
     function distanceBetweenTouches(touchA, touchB) {
       const dx = touchA.clientX - touchB.clientX;
       const dy = touchA.clientY - touchB.clientY;
@@ -1455,6 +1487,14 @@
       els.sidePrev.addEventListener("click", prevPage);
       els.nextBtn.addEventListener("click", nextPage);
       els.sideNext.addEventListener("click", nextPage);
+
+      // Premium desktop interaction:
+      // native PageFlip drag/curl is allowed only from the TOP outer corners.
+      // This keeps the original smooth peel but eliminates the giant bottom flap.
+      els.book.addEventListener("mousemove", updateCornerCursor, true);
+      els.book.addEventListener("mouseleave", () => els.book.classList.remove("corner-ready"), true);
+      els.book.addEventListener("mousedown", blockBadFlipStart, true);
+      els.book.addEventListener("pointerdown", blockBadFlipStart, true);
 
       els.firstBtn.addEventListener("click", () => goToPage(0));
       els.lastBtn.addEventListener("click", () => goToPage(state.totalPages - 1));
