@@ -1228,6 +1228,10 @@
       page.className = "page";
       page.dataset.pageIndex = String(index);
 
+      // PDF/catalogue pages should turn like firm printed sheets.
+      // Soft pages curl diagonally and create the large bottom flap on reverse turns.
+      page.dataset.density = "hard";
+
       const img = document.createElement("img");
       img.className = "pdf-img";
       img.alt = "PDF page " + (index + 1);
@@ -1269,12 +1273,18 @@
         showCover: false,
         usePortrait: isMobile(),
         drawShadow: true,
-        maxShadowOpacity: 0.28,
-        flippingTime: 680,
+        maxShadowOpacity: 0.22,
+        flippingTime: 620,
         mobileScrollSupport: false,
         startPage: safeStartPage,
         clickEventForward: false,
-        useMouseEvents: true
+
+        // Desktop navigation is driven by our buttons/keyboard so the library
+        // never starts a fold from whichever page corner the mouse is near.
+        // Touch interaction stays enabled on mobile.
+        useMouseEvents: isMobile(),
+        showPageCorners: false,
+        disableFlipByClick: true
       });
 
       state.pageFlip.loadFromHTML(els.book.querySelectorAll(".page"));
