@@ -1359,6 +1359,66 @@
       return URL.createObjectURL(blob);
     }
 
+    function isPageRenderReady(index) {
+      if (index < 0 || index >= state.totalPages) return true;
+
+      const cached = state.pageCache.get(index);
+      return !!(cached && cached.key === getRenderKey());
+    }
+
+    function arePagesRenderReady(indices) {
+      const pages = Array.from(new Set(indices || []))
+        .filter((index) => index >= 0 && index < state.totalPages);
+
+      return pages.length > 0 && pages.every(isPageRenderReady);
+    }
+
+    function isCurrentSpreadReady() {
+      const visible = state.visibleIndices && state.visibleIndices.length
+        ? state.visibleIndices
+        : getVisibleIndices();
+
+      return arePagesRenderReady(visible);
+    }
+
+    function refreshNavigationAvailability() {
+      if (!state.totalPages) return;
+
+      const safePage = state.currentPage + 1;
+      const atStart = safePage <= 1;
+      const atEnd = safePage >= state.totalPages;
+      const readMode = state.zoom > 1.001;
+      const spreadReady = isCurrentSpreadReady();
+
+      // Going back is always safe. Moving forward is allowed only after every
+      // currently visible page has finished rendering.
+      els.prevBtn.disabled = atStart;
+      els.firstBtn.disabled = atStart;
+      els.nextBtn.disabled = atEnd || !spreadReady;
+      els.lastBtn.disabled = atEnd || !spreadReady;
+
+      // Slider stays disabled in zoom/read mode and while the current spread is loading.
+      els.pageRange.disabled = readMode || !spreadReady;
+    }
+
+    function showSpreadLoadingStatus() {
+      const visible = state.visibleIndices && state.visibleIndices.length
+        ? state.visibleIndices
+        : getVisibleIndices();
+
+      if (!visible.length) {
+        showStatus("Please wait — pages are loading");
+        return;
+      }
+
+      const labels = visible.map((index) => index + 1);
+      const label = labels.length > 1
+        ? labels[0] + "–" + labels[labels.length - 1]
+        : String(labels[0]);
+
+      showStatus("Pages " + label + " are still loading");
+    }
+
     async function ensurePageRendered(index, options = {}) {
       if (!state.pdfDoc) throw new Error("PDF is not ready yet.");
       if (index < 0 || index >= state.totalPages) return null;
@@ -1415,6 +1475,7 @@
 
           updatePageImage(index, url);
           evictCache();
+          refreshNavigationAvailability();
           return url;
         } catch (error) {
           setPageState(index, "placeholder", "Tap retry / reload");
@@ -1422,6 +1483,7 @@
           throw error;
         } finally {
           state.renderPromises.delete(index);
+          refreshNavigationAvailability();
         }
       })();
 
@@ -1485,18 +1547,14 @@
           (visible[0] + 1) + " / " + state.totalPages;
       }
 
-      const atStart = safePage <= 1;
-      const atEnd = safePage >= state.totalPages;
-      const readMode = state.zoom > 1.001;
-
-      els.prevBtn.disabled = atStart;
-      els.firstBtn.disabled = atStart;
-      els.nextBtn.disabled = atEnd;
-      els.lastBtn.disabled = atEnd;
-      els.pageRange.disabled = readMode;
+      refreshNavigationAvailability();
 
       if (renderNow && state.isReady) {
-        renderVisiblePages().then(schedulePrefetch);
+        renderVisiblePages()
+          .then(() => {
+            refreshNavigationAvailability();
+            schedulePrefetch();
+          });
       }
     }
 
@@ -1563,6 +1621,17 @@
           start: function (event, pageObject, corner) {
             if (corner && corner !== "tl" && corner !== "tr") {
               event.preventDefault();
+              return;
+            }
+
+            // One-spread-at-a-time rule:
+            // allow one forward turn from a fully rendered spread, but once the
+            // user lands on a loading spread do not allow another forward turn
+            // until every visible page is ready. Backward remains available.
+            if (corner === "tr" && !isCurrentSpreadReady()) {
+              event.preventDefault();
+              showSpreadLoadingStatus();
+              refreshNavigationAvailability();
               return;
             }
 
@@ -1665,6 +1734,7 @@
           window.jQuery(els.book).turn("view"),
           true
         );
+        refreshNavigationAvailability();
         schedulePrefetch();
 
         window.setTimeout(hideLoader, 220);
@@ -1678,7 +1748,7 @@
       }
     }
 
-    async function prepareDirection(direction) {
+    function prepareDirection(direction) {
       if (!state.turnReady) return;
 
       const current = currentTurnView();
@@ -1693,39 +1763,56 @@
         }
       });
 
-      await renderIndices(Array.from(candidates), false);
+      // Start these renders now, but DO NOT await them. The user should be able
+      // to enter the next spread immediately and watch its placeholders finish.
+      renderIndices(Array.from(candidates), false).catch(() => {});
     }
 
-    async function nextPage() {
+    function nextPage() {
       if (!state.turnReady || !state.isReady || state.isTurning) return;
 
-      await prepareDirection(1);
+      if (!isCurrentSpreadReady()) {
+        showSpreadLoadingStatus();
+        refreshNavigationAvailability();
+        return;
+      }
+
+      // Warm the next spread in parallel, then turn immediately.
+      prepareDirection(1);
 
       try {
         window.jQuery(els.book).turn("next");
       } catch (_) {}
     }
 
-    async function prevPage() {
+    function prevPage() {
       if (!state.turnReady || !state.isReady || state.isTurning) return;
 
-      await prepareDirection(-1);
+      prepareDirection(-1);
 
       try {
         window.jQuery(els.book).turn("previous");
       } catch (_) {}
     }
 
-    async function goToPage(index) {
+    function goToPage(index) {
       if (!state.turnReady || !state.isReady || state.isTurning) return;
 
       const safe = clamp(index, 0, state.totalPages - 1);
-      const candidates = [safe];
 
+      if (safe > state.currentPage && !isCurrentSpreadReady()) {
+        showSpreadLoadingStatus();
+        refreshNavigationAvailability();
+        return;
+      }
+
+      const candidates = [safe];
       if (safe > 0) candidates.push(safe - 1);
       if (safe + 1 < state.totalPages) candidates.push(safe + 1);
 
-      await renderIndices(candidates, false);
+      // Same rule as Next: begin loading the destination immediately but do not
+      // keep the navigation waiting for the image render.
+      renderIndices(candidates, false).catch(() => {});
 
       try {
         window.jQuery(els.book).turn("page", safe + 1);
@@ -1751,17 +1838,9 @@
       els.zoomInBtn.disabled = atMaximum;
       els.resetZoomBtn.disabled = atMinimum;
 
-      const readMode = !atMinimum;
-      const safePage = state.currentPage + 1;
-      const atStart = safePage <= 1;
-      const atEnd = safePage >= state.totalPages;
-
       // Zoom/read mode blocks direct page gestures, not toolbar navigation.
-      els.prevBtn.disabled = atStart;
-      els.firstBtn.disabled = atStart;
-      els.nextBtn.disabled = atEnd;
-      els.lastBtn.disabled = atEnd;
-      els.pageRange.disabled = readMode;
+      // Navigation readiness (including loading pages) is handled centrally.
+      refreshNavigationAvailability();
     }
 
     function applyZoom() {
