@@ -219,13 +219,20 @@
       cursor: grabbing !important;
     }
 
+    .book-stage {
+      position: relative;
+      flex: 0 0 auto;
+      display: block;
+    }
+
     .book-wrap {
-      transform-origin: center center;
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: top left;
       transition: transform 0.16s ease;
       will-change: transform;
     }
-
-    .viewer.is-zoomed .book-wrap { transform-origin: top left; }
 
     #book {
       position: relative;
@@ -641,8 +648,10 @@
     <button class="side-btn next" type="button" id="sideNext" aria-label="Next page">›</button>
 
     <main class="viewer" id="viewer" aria-live="polite">
-      <div class="book-wrap" id="bookWrap">
-        <div id="book"></div>
+      <div class="book-stage" id="bookStage">
+        <div class="book-wrap" id="bookWrap">
+          <div id="book"></div>
+        </div>
       </div>
     </main>
 
@@ -723,6 +732,7 @@
     const els = {
       shell: document.getElementById("shell"),
       book: document.getElementById("book"),
+      bookStage: document.getElementById("bookStage"),
       bookWrap: document.getElementById("bookWrap"),
       viewer: document.getElementById("viewer"),
       loader: document.getElementById("loader"),
@@ -1204,6 +1214,8 @@
       state.visibleIndices = [];
       els.book.innerHTML = "";
       els.book.removeAttribute("style");
+      els.bookStage.removeAttribute("style");
+      els.bookWrap.removeAttribute("style");
     }
 
     function clearCache() {
@@ -1461,6 +1473,12 @@
       els.book.style.width = size.bookWidth + "px";
       els.book.style.height = size.bookHeight + "px";
 
+      // Keep the outer stage in sync even before applyZoom runs.
+      els.bookStage.style.width = Math.round(size.bookWidth * state.zoom) + "px";
+      els.bookStage.style.height = Math.round(size.bookHeight * state.zoom) + "px";
+      els.bookWrap.style.width = size.bookWidth + "px";
+      els.bookWrap.style.height = size.bookHeight + "px";
+
       const $book = window.jQuery(els.book);
 
       $book.turn({
@@ -1684,17 +1702,40 @@
     }
 
     function applyZoom() {
+      const viewer = els.viewer;
+
+      // Remember the current reading position BEFORE changing the stage size.
+      // At normal fit this resolves to the center; after the user pans, it
+      // preserves the area they are actually reading.
+      const oldScrollWidth = Math.max(viewer.scrollWidth, 1);
+      const oldScrollHeight = Math.max(viewer.scrollHeight, 1);
+      const centerXRatio = clamp(
+        (viewer.scrollLeft + viewer.clientWidth / 2) / oldScrollWidth,
+        0,
+        1
+      );
+      const centerYRatio = clamp(
+        (viewer.scrollTop + viewer.clientHeight / 2) / oldScrollHeight,
+        0,
+        1
+      );
+
       state.zoom = clamp(state.zoom, CONFIG.minZoom, CONFIG.maxZoom);
 
       const readMode = state.zoom > 1.001;
       const baseWidth = Math.max(1, els.book.offsetWidth || 1);
       const baseHeight = Math.max(1, els.book.offsetHeight || 1);
+      const scaledWidth = Math.round(baseWidth * state.zoom);
+      const scaledHeight = Math.round(baseHeight * state.zoom);
 
+      // Stage participates in layout/scrolling; inner wrapper handles the
+      // visual scale. This prevents the transformed book from growing only
+      // toward the left/top of the viewport.
+      els.bookStage.style.width = scaledWidth + "px";
+      els.bookStage.style.height = scaledHeight + "px";
+      els.bookWrap.style.width = baseWidth + "px";
+      els.bookWrap.style.height = baseHeight + "px";
       els.bookWrap.style.transform = "scale(" + state.zoom + ")";
-      els.bookWrap.style.marginRight =
-        readMode ? Math.round(baseWidth * (state.zoom - 1)) + "px" : "0px";
-      els.bookWrap.style.marginBottom =
-        readMode ? Math.round(baseHeight * (state.zoom - 1)) + "px" : "0px";
 
       els.zoomValue.textContent = Math.round(state.zoom * 100) + "%";
       els.viewer.classList.toggle("is-zoomed", readMode);
@@ -1707,7 +1748,28 @@
         state.pan.active = false;
         state.pan.pointerId = null;
         els.viewer.classList.remove("is-panning");
-        els.viewer.scrollTo({ left: 0, top: 0, behavior: "smooth" });
+
+        // Normal/Fit mode is flex-centered, so no manual scroll offset.
+        viewer.scrollTo({ left: 0, top: 0, behavior: "smooth" });
+      } else {
+        // Wait one frame so the browser has the new scrollWidth/scrollHeight,
+        // then restore the same visual center. The first zoom therefore opens
+        // centered; later zooms preserve wherever the user panned to.
+        window.requestAnimationFrame(() => {
+          const newScrollWidth = Math.max(viewer.scrollWidth, 1);
+          const newScrollHeight = Math.max(viewer.scrollHeight, 1);
+
+          const targetLeft =
+            centerXRatio * newScrollWidth - viewer.clientWidth / 2;
+          const targetTop =
+            centerYRatio * newScrollHeight - viewer.clientHeight / 2;
+
+          const maxLeft = Math.max(0, newScrollWidth - viewer.clientWidth);
+          const maxTop = Math.max(0, newScrollHeight - viewer.clientHeight);
+
+          viewer.scrollLeft = clamp(targetLeft, 0, maxLeft);
+          viewer.scrollTop = clamp(targetTop, 0, maxTop);
+        });
       }
 
       window.clearTimeout(state.zoomRenderTimer);
