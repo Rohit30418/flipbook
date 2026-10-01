@@ -665,6 +665,7 @@
         <button class="btn icon" type="button" id="zoomInBtn" aria-label="Zoom in">+</button>
         <button class="btn" type="button" id="resetZoomBtn" aria-label="Reset zoom">Reset</button>
         <button class="btn" type="button" id="qualityBtn" aria-label="Toggle render quality">Ultra HD</button>
+        <button class="btn" type="button" id="soundBtn" aria-label="Toggle page turn sound" aria-pressed="true">Sound On</button>
       </div>
     </footer>
 
@@ -740,6 +741,7 @@
       fitBtn: document.getElementById("fitBtn"),
       fullBtn: document.getElementById("fullBtn"),
       qualityBtn: document.getElementById("qualityBtn"),
+      soundBtn: document.getElementById("soundBtn"),
       prevBtn: document.getElementById("prevBtn"),
       nextBtn: document.getElementById("nextBtn"),
       firstBtn: document.getElementById("firstBtn"),
@@ -754,7 +756,7 @@
     const controls = [
       els.fitBtn, els.fullBtn, els.prevBtn, els.nextBtn, els.firstBtn, els.lastBtn,
       els.sidePrev, els.sideNext, els.zoomInBtn, els.zoomOutBtn, els.resetZoomBtn,
-      els.qualityBtn, els.pageRange
+      els.qualityBtn, els.soundBtn, els.pageRange
     ];
 
     const state = {
@@ -786,6 +788,12 @@
         startLeft: 0,
         startTop: 0
       },
+      audio: {
+        enabled: true,
+        context: null,
+        buffer: null,
+        lastPlayedAt: 0
+      },
       settings: { prefetchRange: 2, cacheLimit: 0, downloadEnabled: true }
     };
 
@@ -800,6 +808,111 @@
 
     function getQueryParam(name) {
       return new URLSearchParams(window.location.search).get(name);
+    }
+
+    function createPageFlipBuffer(context) {
+      const duration = 0.28;
+      const sampleRate = context.sampleRate;
+      const frameCount = Math.max(1, Math.floor(sampleRate * duration));
+      const buffer = context.createBuffer(1, frameCount, sampleRate);
+      const data = buffer.getChannelData(0);
+
+      // A short shaped-noise burst gives a soft paper/rustle feel without an audio file.
+      for (let i = 0; i < frameCount; i++) {
+        const t = i / frameCount;
+        const attack = Math.min(1, t / 0.08);
+        const release = Math.pow(1 - t, 2.2);
+        const envelope = attack * release;
+
+        // Blend broad paper noise with a light textured ripple.
+        const noise = (Math.random() * 2 - 1);
+        const texture = Math.sin(i * 0.17) * 0.16 + Math.sin(i * 0.043) * 0.08;
+        data[i] = (noise * 0.82 + texture) * envelope;
+      }
+
+      return buffer;
+    }
+
+    async function unlockAudio() {
+      if (!state.audio.enabled) return null;
+
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return null;
+
+      if (!state.audio.context) {
+        state.audio.context = new AudioContextClass();
+        state.audio.buffer = createPageFlipBuffer(state.audio.context);
+      }
+
+      if (state.audio.context.state === "suspended") {
+        try {
+          await state.audio.context.resume();
+        } catch (_) {}
+      }
+
+      return state.audio.context;
+    }
+
+    function playPageFlipSound() {
+      if (!state.audio.enabled || state.zoom > 1.001) return;
+
+      const now = performance.now();
+      if (now - state.audio.lastPlayedAt < 180) return;
+      state.audio.lastPlayedAt = now;
+
+      unlockAudio().then((context) => {
+        if (!context || context.state !== "running" || !state.audio.buffer) return;
+
+        const source = context.createBufferSource();
+        const filter = context.createBiquadFilter();
+        const gain = context.createGain();
+
+        source.buffer = state.audio.buffer;
+        source.playbackRate.value = 0.94 + Math.random() * 0.12;
+
+        filter.type = "bandpass";
+        filter.frequency.value = 1750 + Math.random() * 450;
+        filter.Q.value = 0.72;
+
+        const start = context.currentTime;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.11, start + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.24);
+
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(context.destination);
+
+        source.start(start);
+        source.stop(start + 0.28);
+      }).catch(() => {});
+    }
+
+    function updateSoundButton() {
+      if (!els.soundBtn) return;
+
+      els.soundBtn.textContent = state.audio.enabled ? "Sound On" : "Sound Off";
+      els.soundBtn.setAttribute("aria-pressed", String(state.audio.enabled));
+      els.soundBtn.title = state.audio.enabled
+        ? "Page turn sound is on"
+        : "Page turn sound is off";
+    }
+
+    async function toggleSound() {
+      state.audio.enabled = !state.audio.enabled;
+
+      try {
+        localStorage.setItem("flipbook-sound", state.audio.enabled ? "1" : "0");
+      } catch (_) {}
+
+      updateSoundButton();
+
+      if (state.audio.enabled) {
+        await unlockAudio();
+        showStatus("Page turn sound on");
+      } else {
+        showStatus("Page turn sound off");
+      }
     }
 
     function setControlsDisabled(disabled) {
@@ -878,6 +991,14 @@
     }
 
     function applySettingsFromQuery() {
+      try {
+        const savedSound = localStorage.getItem("flipbook-sound");
+        if (savedSound === "0") state.audio.enabled = false;
+        if (savedSound === "1") state.audio.enabled = true;
+      } catch (_) {}
+
+      updateSoundButton();
+
       state.settings.prefetchRange = clamp(getQueryParam("prefetch") ?? 2, 1, CONFIG.maxPrefetchRange);
       const defaultCache = isMobile() ? CONFIG.mobileCacheLimit : CONFIG.desktopCacheLimit;
       state.settings.cacheLimit = clamp(getQueryParam("cache") ?? defaultCache, 6, 36);
@@ -1359,6 +1480,7 @@
 
           turning: function (event, page, view) {
             state.isTurning = true;
+            playPageFlipSound();
             syncFromTurn(page, view, false);
             renderIndices(normalizeView(view, page), false).catch(() => {});
           },
@@ -1663,6 +1785,16 @@
       els.zoomInBtn.addEventListener("click", zoomIn);
       els.zoomOutBtn.addEventListener("click", zoomOut);
       els.resetZoomBtn.addEventListener("click", resetZoom);
+      els.soundBtn.addEventListener("click", toggleSound);
+
+      // Browsers require audio to be unlocked by a user gesture.
+      document.addEventListener("pointerdown", () => {
+        if (state.audio.enabled) unlockAudio().catch(() => {});
+      }, { passive: true });
+
+      document.addEventListener("keydown", () => {
+        if (state.audio.enabled) unlockAudio().catch(() => {});
+      });
 
       els.fitBtn.addEventListener("click", () => {
         if (!state.isReady || !state.turnReady || state.isTurning) return;
@@ -1809,6 +1941,10 @@
       window.addEventListener("beforeunload", () => {
         clearCache();
         destroyFlipbook();
+
+        if (state.audio.context && typeof state.audio.context.close === "function") {
+          state.audio.context.close().catch(() => {});
+        }
 
         if (state.pdfDoc && typeof state.pdfDoc.destroy === "function") {
           state.pdfDoc.destroy().catch(() => {});
