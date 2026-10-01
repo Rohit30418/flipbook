@@ -225,6 +225,13 @@
       display: block;
     }
 
+    .viewer.is-zoomed .book-stage {
+      margin-left: auto;
+      margin-right: auto;
+      margin-top: auto;
+      margin-bottom: auto;
+    }
+
     .book-wrap {
       position: absolute;
       top: 0;
@@ -1703,6 +1710,7 @@
 
     function applyZoom() {
       const viewer = els.viewer;
+      const wasReadMode = viewer.classList.contains("is-zoomed");
 
       // Remember the current reading position BEFORE changing the stage size.
       // At normal fit this resolves to the center; after the user pans, it
@@ -1758,14 +1766,24 @@
         window.requestAnimationFrame(() => {
           const newScrollWidth = Math.max(viewer.scrollWidth, 1);
           const newScrollHeight = Math.max(viewer.scrollHeight, 1);
-
-          const targetLeft =
-            centerXRatio * newScrollWidth - viewer.clientWidth / 2;
-          const targetTop =
-            centerYRatio * newScrollHeight - viewer.clientHeight / 2;
-
           const maxLeft = Math.max(0, newScrollWidth - viewer.clientWidth);
           const maxTop = Math.max(0, newScrollHeight - viewer.clientHeight);
+
+          let targetLeft;
+          let targetTop;
+
+          if (!wasReadMode) {
+            // Entering zoom/read mode for the first time: always start from
+            // the visual center of the spread, exactly like premium viewers.
+            targetLeft = maxLeft / 2;
+            targetTop = maxTop / 2;
+          } else {
+            // Already zoomed: preserve the area the user was reading.
+            targetLeft =
+              centerXRatio * newScrollWidth - viewer.clientWidth / 2;
+            targetTop =
+              centerYRatio * newScrollHeight - viewer.clientHeight / 2;
+          }
 
           viewer.scrollLeft = clamp(targetLeft, 0, maxLeft);
           viewer.scrollTop = clamp(targetTop, 0, maxTop);
