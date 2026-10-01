@@ -213,6 +213,14 @@
     #book {
       filter: drop-shadow(var(--shadow));
       cursor: pointer;
+
+      /*
+        Keep the natural soft page curl, but never allow the transformed sheet
+        to hang below/above the physical book like a giant bottom flap.
+        Large negative left/right inset keeps the horizontal turn visible.
+      */
+      clip-path: inset(0 -200vw 0 -200vw);
+      -webkit-clip-path: inset(0 -200vw 0 -200vw);
     }
 
     #book.is-flipping { cursor: wait; }
@@ -1234,9 +1242,8 @@
       page.className = "page";
       page.dataset.pageIndex = String(index);
 
-      // PDF/catalogue pages should turn like firm printed sheets.
-      // Soft pages curl diagonally and create the large bottom flap on reverse turns.
-      page.dataset.density = "hard";
+      // Keep normal soft-paper density for a natural magazine-like page curl.
+      page.dataset.density = "soft";
 
       const img = document.createElement("img");
       img.className = "pdf-img";
@@ -1279,15 +1286,14 @@
         showCover: false,
         usePortrait: isMobile(),
         drawShadow: true,
-        maxShadowOpacity: 0.22,
-        flippingTime: 620,
+        maxShadowOpacity: 0.34,
+        flippingTime: 820,
         mobileScrollSupport: false,
         startPage: safeStartPage,
         clickEventForward: false,
 
-        // Desktop navigation is driven by our buttons/keyboard so the library
-        // never starts a fold from whichever page corner the mouse is near.
-        // Touch interaction stays enabled on mobile.
+        // Desktop navigation is driven by our own click handler so every turn
+        // starts from the TOP corner. Mobile keeps native swipe interaction.
         useMouseEvents: isMobile(),
         showPageCorners: false,
         disableFlipByClick: true
