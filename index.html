@@ -193,6 +193,20 @@
       position: relative;
       filter: drop-shadow(var(--shadow));
       cursor: default;
+
+      /* At normal flip mode Turn.js must own the horizontal finger gesture.
+         Without this, mobile browsers can claim right/left swipes as native pan. */
+      touch-action: none;
+      -ms-touch-action: none;
+    }
+
+    .viewer:not(.is-zoomed) .book-stage,
+    .viewer:not(.is-zoomed) .book-wrap,
+    .viewer:not(.is-zoomed) #book,
+    .viewer:not(.is-zoomed) #book .page,
+    .viewer:not(.is-zoomed) #book .turn-page {
+      touch-action: none;
+      -ms-touch-action: none;
     }
 
     #book .page,
