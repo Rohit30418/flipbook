@@ -898,7 +898,9 @@
     }
 
     function playPageFlipSound() {
-      if (!state.audio.enabled || state.zoom > 1.001 || !state.audio.element) return;
+      // Sound follows an actual page turn, regardless of zoom level.
+      // Zoomed panning itself stays silent because it never triggers this function.
+      if (!state.audio.enabled || !state.audio.element) return;
 
       const now = performance.now();
       if (now - state.audio.lastPlayedAt < 180) return;
