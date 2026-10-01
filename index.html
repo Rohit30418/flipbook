@@ -19,18 +19,34 @@
 
   <style>
     :root {
-      --bg: #062746;
-      --bg-2: #031a31;
-      --bg-3: #020f1d;
-      --white: #ffffff;
-      --primary: #00A0C4;
-      --secondary: #72C22C;
+      --brand: #4aab3d;
+      --brand-strong: #3d9432;
+      --bg: #0d1711;
+      --bg-2: #101f16;
+      --bg-3: #07100b;
+      --surface: rgba(16, 31, 22, 0.94);
+      --surface-soft: rgba(255, 255, 255, 0.08);
+      --surface-hover: rgba(255, 255, 255, 0.15);
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.72);
+      --border: rgba(255,255,255,0.14);
       --danger: #fecaca;
-      --toolbar: rgba(3, 26, 49, 0.94);
-      --border: rgba(255, 255, 255, 0.16);
-      --shadow: 0 35px 90px rgba(0, 0, 0, 0.45);
-      --topbar-height: 66px;
+      --shadow: 0 35px 90px rgba(0, 0, 0, 0.42);
+      --topbar-height: 0px;
       --toolbar-height: 76px;
+    }
+
+    html[data-theme="light"] {
+      --bg: #edf3eb;
+      --bg-2: #f7faf6;
+      --bg-3: #e4ece1;
+      --surface: rgba(255,255,255,0.94);
+      --surface-soft: rgba(24, 45, 28, 0.06);
+      --surface-hover: rgba(74, 171, 61, 0.11);
+      --text: #18251b;
+      --muted: rgba(24,37,27,0.68);
+      --border: rgba(35, 67, 40, 0.14);
+      --shadow: 0 28px 70px rgba(34, 60, 39, 0.20);
     }
 
     * { box-sizing: border-box; }
@@ -44,7 +60,7 @@
       overflow: hidden;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: var(--bg);
-      color: var(--white);
+      color: var(--text);
       -webkit-font-smoothing: antialiased;
       text-rendering: geometricPrecision;
     }
@@ -61,7 +77,7 @@
     button:focus-visible,
     a:focus-visible,
     input:focus-visible {
-      outline: 3px solid rgba(114, 194, 44, 0.72);
+      outline: 3px solid color-mix(in srgb, var(--brand) 72%, transparent);
       outline-offset: 3px;
     }
 
@@ -73,8 +89,8 @@
       overflow: hidden;
       isolation: isolate;
       background:
-        radial-gradient(circle at 50% 32%, rgba(0, 160, 196, 0.24), transparent 34%),
-        radial-gradient(circle at 18% 80%, rgba(114, 194, 44, 0.14), transparent 32%),
+        radial-gradient(circle at 50% 32%, rgba(74, 171, 61, 0.18), transparent 34%),
+        radial-gradient(circle at 18% 80%, rgba(74, 171, 61, 0.10), transparent 32%),
         linear-gradient(135deg, var(--bg), var(--bg-2) 60%, var(--bg-3));
     }
 
@@ -94,7 +110,7 @@
       height: 48vw;
       right: -18vw;
       top: -18vw;
-      background: rgba(0, 160, 196, 0.14);
+      background: rgba(74, 171, 61, 0.12);
     }
 
     .flipbook-shell::after {
@@ -102,73 +118,9 @@
       height: 42vw;
       left: -16vw;
       bottom: -18vw;
-      background: rgba(114, 194, 44, 0.12);
+      background: rgba(74, 171, 61, 0.10);
     }
 
-    .topbar {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      min-height: var(--topbar-height);
-      padding: max(10px, env(safe-area-inset-top)) 20px 10px;
-      z-index: 30;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      background: linear-gradient(to bottom, rgba(3, 26, 49, 0.94), rgba(3, 26, 49, 0.36), transparent);
-      pointer-events: none;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      min-width: 0;
-      gap: 12px;
-      pointer-events: auto;
-    }
-
-    .brand-icon {
-      flex: 0 0 auto;
-      width: 42px;
-      height: 42px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      display: grid;
-      place-items: center;
-      color: #fff;
-      font-weight: 950;
-      letter-spacing: -0.04em;
-      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.26);
-    }
-
-    .brand-copy { min-width: 0; }
-
-    .brand h1,
-    .brand p {
-      max-width: min(520px, 45vw);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .brand h1 {
-      margin: 0;
-      font-size: 16px;
-      line-height: 1.1;
-      font-weight: 900;
-      letter-spacing: -0.02em;
-    }
-
-    .brand p {
-      margin: 3px 0 0;
-      font-size: 12px;
-      color: rgba(255,255,255,0.72);
-      font-weight: 650;
-    }
-
-    .top-actions,
     .tool-group,
     .range-wrap {
       display: flex;
@@ -176,15 +128,10 @@
       gap: 8px;
     }
 
-    .top-actions {
-      pointer-events: auto;
-      justify-content: flex-end;
-    }
-
     .viewer {
       position: absolute;
       inset: 0;
-      padding: calc(var(--topbar-height) + 8px) 86px calc(var(--toolbar-height) + 14px);
+      padding: 18px 24px calc(var(--toolbar-height) + 14px);
       overflow: auto;
       display: flex;
       align-items: center;
@@ -319,7 +266,7 @@
       width: 12px;
       height: 12px;
       border: 2px solid #cbd5e1;
-      border-top-color: #00A0C4;
+      border-top-color: var(--brand);
       border-radius: 999px;
       animation: spin 0.75s linear infinite;
     }
@@ -334,7 +281,7 @@
       z-index: 35;
       min-height: var(--toolbar-height);
       padding: 12px 22px calc(12px + env(safe-area-inset-bottom));
-      background: var(--toolbar);
+      background: var(--surface);
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
       border-top: 1px solid var(--border);
@@ -349,9 +296,9 @@
     .btn {
       height: 42px;
       min-width: 42px;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(255,255,255,0.08);
-      color: #fff;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      color: var(--text);
       border-radius: 999px;
       font-size: 13px;
       font-weight: 850;
@@ -369,7 +316,7 @@
     .btn.icon { padding: 0; font-size: 20px; }
 
     .btn:hover:not(:disabled) {
-      background: rgba(255,255,255,0.16);
+      background: var(--surface-hover);
       transform: translateY(-1px);
     }
 
@@ -383,9 +330,47 @@
     }
 
     .btn.primary {
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+      color: #fff;
       border-color: transparent;
-      box-shadow: 0 12px 26px rgba(0, 160, 196, 0.24);
+      box-shadow: 0 10px 24px rgba(74, 171, 61, 0.28);
+    }
+
+    .btn.icon-only {
+      width: 42px;
+      min-width: 42px;
+      padding: 0;
+      border-radius: 13px;
+    }
+
+    .btn.icon-only svg {
+      width: 19px;
+      height: 19px;
+      display: block;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+
+    .btn.icon-only.is-active {
+      background: color-mix(in srgb, var(--brand) 20%, transparent);
+      border-color: color-mix(in srgb, var(--brand) 52%, transparent);
+      color: var(--brand);
+    }
+
+    .btn.icon-only.primary svg {
+      stroke: #fff;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 7px;
+      min-width: 0;
     }
 
     .page-text,
@@ -395,7 +380,7 @@
     }
 
     .page-text {
-      color: #fff;
+      color: var(--text);
       min-width: 98px;
       text-align: center;
       font-size: 14px;
@@ -406,12 +391,12 @@
 
     .page-range {
       width: 100%;
-      accent-color: #ffffff;
+      accent-color: var(--brand);
       cursor: pointer;
     }
 
     .zoom-value {
-      color: rgba(255,255,255,0.78);
+      color: var(--muted);
       min-width: 54px;
       font-size: 12px;
       text-align: right;
@@ -426,9 +411,9 @@
       max-width: min(420px, calc(100vw - 32px));
       padding: 10px 14px;
       border-radius: 999px;
-      background: rgba(3, 26, 49, 0.84);
-      border: 1px solid rgba(255,255,255,0.15);
-      color: rgba(255,255,255,0.9);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       font-size: 12px;
@@ -457,7 +442,7 @@
       padding: 24px;
       color: #fff;
       background:
-        radial-gradient(circle at 50% 42%, rgba(0, 160, 196, 0.24), transparent 34%),
+        radial-gradient(circle at 50% 42%, rgba(74, 171, 61, 0.18), transparent 34%),
         linear-gradient(135deg, var(--bg), var(--bg-2));
       transition: opacity 0.3s ease, visibility 0.3s ease;
     }
@@ -564,12 +549,8 @@
     }
 
     @media (max-width: 980px) {
-      :root { --topbar-height: 60px; --toolbar-height: 92px; }
-      .topbar { padding-left: 12px; padding-right: 12px; }
-      .brand-icon { width: 38px; height: 38px; border-radius: 13px; font-size: 13px; }
-      .brand h1 { max-width: 42vw; font-size: 14px; }
-      .brand p { display: none; }
-      .viewer { padding: calc(var(--topbar-height) + 4px) 10px calc(var(--toolbar-height) + 8px); }
+      :root { --toolbar-height: 108px; }
+      .viewer { padding: 10px 10px calc(var(--toolbar-height) + 8px); }
       .bottom-toolbar { grid-template-columns: 1fr; gap: 8px; padding: 10px 10px calc(10px + env(safe-area-inset-bottom)); }
       .tool-group { justify-content: center; flex-wrap: wrap; }
       .range-wrap { order: -1; }
@@ -579,8 +560,6 @@
 
     @media (max-width: 560px) {
       :root { --toolbar-height: 112px; }
-      .top-actions .btn:not(.primary) { display: none; }
-      .brand h1 { max-width: 46vw; }
       .page-text { min-width: 76px; }
       .zoom-value { min-width: 48px; }
       .loader-card,
@@ -588,7 +567,6 @@
     }
 
     @media (max-width: 400px) {
-      .brand h1 { display: none; }
       .btn:not(.primary) { padding-left: 10px; padding-right: 10px; }
     }
 
@@ -605,22 +583,6 @@
 
 <body>
   <div class="flipbook-shell" id="shell" role="application" aria-label="PDF flipbook viewer">
-    <header class="topbar">
-      <div class="brand" aria-label="Flipbook brand">
-        <div class="brand-icon" aria-hidden="true">PDF</div>
-        <div class="brand-copy">
-          <h1 id="brandTitle">Premium Flipbook</h1>
-          <p id="brandSubTitle">Lazy HD PDF viewer with 3D page flip</p>
-        </div>
-      </div>
-
-      <div class="top-actions" aria-label="Top controls">
-        <button class="btn" type="button" id="fitBtn" aria-label="Toggle fit mode">Fit Width</button>
-        <button class="btn" type="button" id="fullBtn" aria-label="Toggle fullscreen">Fullscreen</button>
-        <a class="btn primary" id="downloadBtn" href="#" download aria-label="Download PDF">Download</a>
-      </div>
-    </header>
-
     <main class="viewer" id="viewer" aria-live="polite">
       <div class="book-stage" id="bookStage">
         <div class="book-wrap" id="bookWrap">
@@ -631,24 +593,58 @@
 
     <footer class="bottom-toolbar" aria-label="Flipbook controls">
       <div class="tool-group" aria-label="Page controls">
-        <button class="btn icon" type="button" id="firstBtn" aria-label="First page">‹‹</button>
-        <button class="btn icon" type="button" id="prevBtn" aria-label="Previous page">‹</button>
+        <button class="btn icon-only" type="button" id="firstBtn" aria-label="First page" title="First page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M18 6l-6 6 6 6"/></svg>
+        </button>
+        <button class="btn icon-only" type="button" id="prevBtn" aria-label="Previous page" title="Previous page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
         <div class="page-text" id="pageText" aria-label="Current page">0 / 0</div>
-        <button class="btn icon" type="button" id="nextBtn" aria-label="Next page">›</button>
-        <button class="btn icon" type="button" id="lastBtn" aria-label="Last page">››</button>
+        <button class="btn icon-only" type="button" id="nextBtn" aria-label="Next page" title="Next page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+        <button class="btn icon-only" type="button" id="lastBtn" aria-label="Last page" title="Last page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M6 6l6 6-6 6"/></svg>
+        </button>
       </div>
 
       <div class="range-wrap">
         <input type="range" class="page-range" id="pageRange" min="0" max="0" value="0" aria-label="Jump to page" />
       </div>
 
-      <div class="tool-group" aria-label="Zoom and quality controls">
-        <button class="btn icon" type="button" id="zoomOutBtn" aria-label="Zoom out">−</button>
+      <div class="toolbar-actions" aria-label="Viewer actions">
+        <button class="btn icon-only" type="button" id="zoomOutBtn" aria-label="Zoom out" title="Zoom out">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 12h10"/></svg>
+        </button>
         <div class="zoom-value" id="zoomValue">100%</div>
-        <button class="btn icon" type="button" id="zoomInBtn" aria-label="Zoom in">+</button>
-        <button class="btn" type="button" id="resetZoomBtn" aria-label="Reset zoom">Reset</button>
-        <button class="btn" type="button" id="qualityBtn" aria-label="Toggle render quality">Ultra HD</button>
-        <button class="btn" type="button" id="soundBtn" aria-label="Toggle page turn sound" aria-pressed="true">Sound On</button>
+        <button class="btn icon-only" type="button" id="zoomInBtn" aria-label="Zoom in" title="Zoom in">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v10M7 12h10"/></svg>
+        </button>
+        <button class="btn icon-only" type="button" id="resetZoomBtn" aria-label="Reset zoom" title="Reset zoom">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v6h6M5.2 15a8 8 0 1 0 1.9-8.1L4 10"/></svg>
+        </button>
+
+        <button class="btn icon-only" type="button" id="fitBtn" aria-label="Fit width" title="Fit width">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5H5v3M16 5h3v3M8 19H5v-3M16 19h3v-3M7 12h10"/></svg>
+        </button>
+        <button class="btn icon-only" type="button" id="qualityBtn" aria-label="Toggle render quality" title="Ultra HD">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9v6M11 9v6M15 9h2.5a2.5 2.5 0 0 1 0 5H15z"/></svg>
+        </button>
+        <button class="btn icon-only" type="button" id="soundBtn" aria-label="Toggle page turn sound" title="Sound on" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4zM15 9a4 4 0 0 1 0 6M17.5 6.5a8 8 0 0 1 0 11"/></svg>
+        </button>
+        <button class="btn icon-only" type="button" id="themeBtn" aria-label="Switch to light mode" title="Switch to light mode" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+        </button>
+        <button class="btn icon-only" type="button" id="shareBtn" aria-label="Share current link" title="Share current link">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.3 10.8l7.4-4.5M8.3 13.2l7.4 4.5"/></svg>
+        </button>
+        <button class="btn icon-only" type="button" id="fullBtn" aria-label="Enter fullscreen" title="Fullscreen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+        </button>
+        <a class="btn icon-only primary" id="downloadBtn" href="#" download aria-label="Download PDF" title="Download PDF">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>
+        </a>
       </div>
     </footer>
 
@@ -685,8 +681,8 @@
       defaultPdf: "iopepc.pdf",
       defaultFlipSound: "page-flip.mp3",
       flipSoundVolume: 0.38,
-      defaultTitle: "Premium Flipbook",
-      defaultSubTitle: "Lazy HD PDF viewer with premium page turn",
+      defaultTitle: "PDF Flipbook",
+      defaultSubTitle: "PDF viewer",
       minZoom: 1,
       maxZoom: 3,
       zoomStep: 0.20,
@@ -721,13 +717,13 @@
       pageText: document.getElementById("pageText"),
       pageRange: document.getElementById("pageRange"),
       zoomValue: document.getElementById("zoomValue"),
-      brandTitle: document.getElementById("brandTitle"),
-      brandSubTitle: document.getElementById("brandSubTitle"),
       downloadBtn: document.getElementById("downloadBtn"),
       fitBtn: document.getElementById("fitBtn"),
       fullBtn: document.getElementById("fullBtn"),
       qualityBtn: document.getElementById("qualityBtn"),
       soundBtn: document.getElementById("soundBtn"),
+      themeBtn: document.getElementById("themeBtn"),
+      shareBtn: document.getElementById("shareBtn"),
       prevBtn: document.getElementById("prevBtn"),
       nextBtn: document.getElementById("nextBtn"),
       firstBtn: document.getElementById("firstBtn"),
@@ -740,7 +736,7 @@
     const controls = [
       els.fitBtn, els.fullBtn, els.prevBtn, els.nextBtn, els.firstBtn, els.lastBtn,
       els.zoomInBtn, els.zoomOutBtn, els.resetZoomBtn,
-      els.qualityBtn, els.soundBtn, els.pageRange
+      els.qualityBtn, els.soundBtn, els.themeBtn, els.shareBtn, els.pageRange
     ];
 
     const state = {
@@ -779,6 +775,7 @@
         lastPlayedAt: 0,
         primed: false
       },
+      theme: "dark",
       settings: { prefetchRange: 2, cacheLimit: 0, downloadEnabled: true }
     };
 
@@ -793,6 +790,79 @@
 
     function getQueryParam(name) {
       return new URLSearchParams(window.location.search).get(name);
+    }
+
+    function getHashPage() {
+      const match = String(window.location.hash || "").match(/(?:^#|[&#])p=(\d+)/i);
+      if (!match) return 0;
+      return Math.max(0, Number(match[1]) - 1);
+    }
+
+    function syncShareUrl(pageNumber) {
+      try {
+        const url = new URL(window.location.href);
+        url.hash = "p=" + Math.max(1, Number(pageNumber) || 1);
+        history.replaceState(null, "", url.href);
+      } catch (_) {}
+    }
+
+    function updateThemeButton() {
+      if (!els.themeBtn) return;
+      const light = state.theme === "light";
+      els.themeBtn.classList.toggle("is-active", light);
+      els.themeBtn.setAttribute("aria-pressed", String(light));
+      els.themeBtn.setAttribute("aria-label", light ? "Switch to dark mode" : "Switch to light mode");
+      els.themeBtn.title = light ? "Dark mode" : "Light mode";
+    }
+
+    function applyTheme(theme, persist = true) {
+      state.theme = theme === "light" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", state.theme);
+      updateThemeButton();
+
+      if (persist) {
+        try {
+          localStorage.setItem("flipbook-theme", state.theme);
+        } catch (_) {}
+      }
+    }
+
+    function toggleTheme() {
+      applyTheme(state.theme === "dark" ? "light" : "dark");
+    }
+
+    async function shareCurrentLink() {
+      syncShareUrl(state.currentPage + 1);
+      const url = window.location.href;
+
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: document.title || "Flipbook",
+            url
+          });
+          return;
+        }
+
+        await navigator.clipboard.writeText(url);
+        showStatus("Current page link copied");
+      } catch (error) {
+        if (error && error.name === "AbortError") return;
+
+        try {
+          const input = document.createElement("textarea");
+          input.value = url;
+          input.style.position = "fixed";
+          input.style.opacity = "0";
+          document.body.appendChild(input);
+          input.select();
+          document.execCommand("copy");
+          input.remove();
+          showStatus("Current page link copied");
+        } catch (_) {
+          showStatus("Could not share link");
+        }
+      }
     }
 
     function resolveFlipSoundUrl() {
@@ -887,11 +957,10 @@
     function updateSoundButton() {
       if (!els.soundBtn) return;
 
-      els.soundBtn.textContent = state.audio.enabled ? "Sound On" : "Sound Off";
+      els.soundBtn.classList.toggle("is-active", state.audio.enabled);
       els.soundBtn.setAttribute("aria-pressed", String(state.audio.enabled));
-      els.soundBtn.title = state.audio.enabled
-        ? "Page turn sound is on"
-        : "Page turn sound is off";
+      els.soundBtn.setAttribute("aria-label", state.audio.enabled ? "Turn page sound off" : "Turn page sound on");
+      els.soundBtn.title = state.audio.enabled ? "Sound on" : "Sound off";
     }
 
     function toggleSound() {
@@ -985,15 +1054,18 @@
       }
     }
 
-    function applyBranding() {
-      const title = (getQueryParam("title") || CONFIG.defaultTitle).trim();
-      const subTitle = (getQueryParam("subtitle") || CONFIG.defaultSubTitle).trim();
-      els.brandTitle.textContent = title;
-      els.brandSubTitle.textContent = subTitle;
-      document.title = title + " | PDF Flipbook";
-    }
-
     function applySettingsFromQuery() {
+      try {
+        const savedTheme = localStorage.getItem("flipbook-theme");
+        if (savedTheme === "light" || savedTheme === "dark") {
+          state.theme = savedTheme;
+        } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+          state.theme = "light";
+        }
+      } catch (_) {}
+
+      applyTheme(state.theme, false);
+
       try {
         const savedSound = localStorage.getItem("flipbook-sound");
         if (savedSound === "0") state.audio.enabled = false;
@@ -1383,6 +1455,7 @@
 
       state.currentPage = safePage - 1;
       state.visibleIndices = visible;
+      syncShareUrl(safePage);
 
       els.pageRange.value = String(state.currentPage);
 
@@ -1849,6 +1922,8 @@
       els.zoomOutBtn.addEventListener("click", zoomOut);
       els.resetZoomBtn.addEventListener("click", resetZoom);
       els.soundBtn.addEventListener("click", toggleSound);
+      els.themeBtn.addEventListener("click", toggleTheme);
+      els.shareBtn.addEventListener("click", shareCurrentLink);
 
       // Prime the MP3 on the first real user interaction for browser audio policies.
       document.addEventListener("pointerdown", () => {
@@ -1863,8 +1938,10 @@
         if (!state.isReady || !state.turnReady || state.isTurning) return;
 
         state.fitMode = state.fitMode === "width" ? "height" : "width";
-        els.fitBtn.textContent =
-          state.fitMode === "width" ? "Fit Width" : "Fit Height";
+        els.fitBtn.setAttribute("aria-label",
+          state.fitMode === "width" ? "Fit width" : "Fit height");
+        els.fitBtn.title =
+          state.fitMode === "width" ? "Fit width" : "Fit height";
 
         const keepPage = state.currentPage;
         resetZoom();
@@ -1883,7 +1960,10 @@
         state.qualityMode =
           state.qualityMode === "ultra" ? "hd" : "ultra";
 
-        els.qualityBtn.textContent =
+        els.qualityBtn.classList.toggle("is-active", state.qualityMode === "ultra");
+        els.qualityBtn.setAttribute("aria-label",
+          state.qualityMode === "ultra" ? "Ultra HD quality" : "HD quality");
+        els.qualityBtn.title =
           state.qualityMode === "ultra" ? "Ultra HD" : "HD";
 
         clearCache();
@@ -1896,10 +1976,8 @@
         try {
           if (!document.fullscreenElement) {
             await document.documentElement.requestFullscreen();
-            els.fullBtn.textContent = "Exit Fullscreen";
           } else {
             await document.exitFullscreen();
-            els.fullBtn.textContent = "Fullscreen";
           }
         } catch (_) {
           showStatus("Fullscreen blocked by browser or iframe permission");
@@ -1907,8 +1985,10 @@
       });
 
       document.addEventListener("fullscreenchange", () => {
-        els.fullBtn.textContent =
-          document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
+        const active = !!document.fullscreenElement;
+        els.fullBtn.classList.toggle("is-active", active);
+        els.fullBtn.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
+        els.fullBtn.title = active ? "Exit fullscreen" : "Fullscreen";
       });
 
       els.retryBtn.addEventListener("click", () =>
@@ -2021,17 +2101,17 @@
     async function init() {
       try {
         setupLibraries();
-        applyBranding();
         applySettingsFromQuery();
         initPageFlipAudio();
 
         state.pdfUrl = resolvePdfUrl();
+        document.title = (getQueryParam("title") || CONFIG.defaultTitle) + " | Flipbook";
 
         els.downloadBtn.href = state.pdfUrl;
         els.downloadBtn.download = safeFileNameFromUrl(state.pdfUrl);
 
         bindEvents();
-        await loadFlipbook(0);
+        await loadFlipbook(getHashPage());
       } catch (error) {
         console.error(error);
         setControlsDisabled(false);
