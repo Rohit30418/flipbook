@@ -212,18 +212,11 @@
 
     #book {
       filter: drop-shadow(var(--shadow));
-      cursor: pointer;
-
-      /*
-        Keep the natural soft page curl, but never allow the transformed sheet
-        to hang below/above the physical book like a giant bottom flap.
-        Large negative left/right inset keeps the horizontal turn visible.
-      */
-      clip-path: inset(0 -200vw 0 -200vw);
-      -webkit-clip-path: inset(0 -200vw 0 -200vw);
+      cursor: grab;
     }
 
-    #book.is-flipping { cursor: wait; }
+    #book:active { cursor: grabbing; }
+    #book.is-flipping { cursor: grabbing; }
 
     .page {
       position: relative;
@@ -1286,17 +1279,17 @@
         showCover: false,
         usePortrait: isMobile(),
         drawShadow: true,
-        maxShadowOpacity: 0.34,
-        flippingTime: 820,
+        maxShadowOpacity: 0.38,
+        flippingTime: 900,
         mobileScrollSupport: false,
         startPage: safeStartPage,
         clickEventForward: false,
 
-        // Desktop navigation is driven by our own click handler so every turn
-        // starts from the TOP corner. Mobile keeps native swipe interaction.
-        useMouseEvents: isMobile(),
-        showPageCorners: false,
-        disableFlipByClick: true
+        // Native PageFlip interaction gives the premium corner-peel feel:
+        // hover corner lift, mouse drag, click turn and touch swipe.
+        useMouseEvents: true,
+        showPageCorners: true,
+        disableFlipByClick: false
       });
 
       state.pageFlip.loadFromHTML(els.book.querySelectorAll(".page"));
@@ -1434,34 +1427,6 @@
       state.pageFlip.turnToPage(safe);
     }
 
-    function setFlipCursor(active) {
-      els.book.classList.toggle("is-flipping", !!active);
-    }
-
-    async function handleBookClick(event) {
-      if (isMobile() || !state.pageFlip || !state.isReady || state.isFlipping) return;
-
-      const rect = els.book.getBoundingClientRect();
-      if (!rect.width) return;
-
-      const localX = event.clientX - rect.left;
-
-      // Left half = previous, right half = next.
-      // The actual turn is still forced from the TOP corner to avoid the
-      // large bottom-corner curl that was happening before.
-      setFlipCursor(true);
-
-      try {
-        if (localX < rect.width / 2) {
-          await prevPage();
-        } else {
-          await nextPage();
-        }
-      } finally {
-        window.setTimeout(() => setFlipCursor(false), 700);
-      }
-    }
-
     function distanceBetweenTouches(touchA, touchB) {
       const dx = touchA.clientX - touchB.clientX;
       const dy = touchA.clientY - touchB.clientY;
@@ -1474,9 +1439,6 @@
       els.nextBtn.addEventListener("click", nextPage);
       els.sideNext.addEventListener("click", nextPage);
 
-      // Desktop page click:
-      // click left page -> previous, click right page -> next.
-      els.book.addEventListener("click", handleBookClick);
       els.firstBtn.addEventListener("click", () => goToPage(0));
       els.lastBtn.addEventListener("click", () => goToPage(state.totalPages - 1));
 
