@@ -161,19 +161,46 @@
     .page {
       position: relative;
       overflow: hidden;
-      background: #fff;
+      background: #fff !important;
       box-shadow: inset 0 0 0 1px rgba(0,0,0,.05);
+      isolation: isolate;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      transform: translateZ(0);
     }
-    .page img { width: 100%; height: 100%; object-fit: contain; display: block; user-select: none; -webkit-user-drag: none; }
 
-    /* subtle realistic paper lighting */
+    .page img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #fff;
+      user-select: none;
+      -webkit-user-drag: none;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      transform: translateZ(0);
+    }
+
+    /* PageFlip creates its own moving/clipped layers while a sheet is turning.
+       Keep every generated paper surface opaque so the page below never bleeds through. */
+    #book .stf__item,
+    #book .stf__block,
+    #book .stf__page {
+      background-color: #fff !important;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    /* subtle paper lighting - normal blend is important during 3D transforms */
     .page::after {
       content: "";
       position: absolute;
+      z-index: 2;
       inset: 0;
       pointer-events: none;
-      background: linear-gradient(90deg, rgba(0,0,0,.035), transparent 7%, transparent 93%, rgba(0,0,0,.045));
-      mix-blend-mode: multiply;
+      background: linear-gradient(90deg, rgba(0,0,0,.028), transparent 8%, transparent 92%, rgba(0,0,0,.035));
+      mix-blend-mode: normal;
     }
 
     .bottom-bar {
@@ -517,7 +544,19 @@
     const ctx = canvas.getContext('2d', { alpha: false });
     canvas.width = Math.floor(viewport.width);
     canvas.height = Math.floor(viewport.height);
-    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    // PDFs do not have to paint an opaque page background themselves.
+    // Force solid white before rendering so a turning page can never become translucent.
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    await page.render({
+      canvasContext: ctx,
+      viewport,
+      background: 'rgb(255,255,255)'
+    }).promise;
     return canvas.toDataURL('image/jpeg', .90);
   }
 
@@ -599,7 +638,7 @@
       width: pageW,
       height: pageH,
       size: 'fixed',
-      maxShadowOpacity: .32,
+      maxShadowOpacity: .22,
       showCover: true,
       mobileScrollSupport: false,
       usePortrait: isMobile,
