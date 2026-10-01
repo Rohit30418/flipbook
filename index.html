@@ -210,7 +210,12 @@
 
     .viewer.is-zoomed .book-wrap { transform-origin: top left; }
 
-    #book { filter: drop-shadow(var(--shadow)); }
+    #book {
+      filter: drop-shadow(var(--shadow));
+      cursor: pointer;
+    }
+
+    #book.is-flipping { cursor: wait; }
 
     .page {
       position: relative;
@@ -1018,6 +1023,7 @@
       }
       state.pageFlip = null;
       state.isFlipping = false;
+      els.book.classList.remove("is-flipping");
       state.pageElements = [];
       els.book.innerHTML = "";
     }
@@ -1422,6 +1428,34 @@
       state.pageFlip.turnToPage(safe);
     }
 
+    function setFlipCursor(active) {
+      els.book.classList.toggle("is-flipping", !!active);
+    }
+
+    async function handleBookClick(event) {
+      if (isMobile() || !state.pageFlip || !state.isReady || state.isFlipping) return;
+
+      const rect = els.book.getBoundingClientRect();
+      if (!rect.width) return;
+
+      const localX = event.clientX - rect.left;
+
+      // Left half = previous, right half = next.
+      // The actual turn is still forced from the TOP corner to avoid the
+      // large bottom-corner curl that was happening before.
+      setFlipCursor(true);
+
+      try {
+        if (localX < rect.width / 2) {
+          await prevPage();
+        } else {
+          await nextPage();
+        }
+      } finally {
+        window.setTimeout(() => setFlipCursor(false), 700);
+      }
+    }
+
     function distanceBetweenTouches(touchA, touchB) {
       const dx = touchA.clientX - touchB.clientX;
       const dy = touchA.clientY - touchB.clientY;
@@ -1433,6 +1467,10 @@
       els.sidePrev.addEventListener("click", prevPage);
       els.nextBtn.addEventListener("click", nextPage);
       els.sideNext.addEventListener("click", nextPage);
+
+      // Desktop page click:
+      // click left page -> previous, click right page -> next.
+      els.book.addEventListener("click", handleBookClick);
       els.firstBtn.addEventListener("click", () => goToPage(0));
       els.lastBtn.addEventListener("click", () => goToPage(state.totalPages - 1));
 
