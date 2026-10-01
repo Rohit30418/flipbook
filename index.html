@@ -772,6 +772,7 @@
       renderPromises: new Map(),
       renderJobId: 0,
       isReady: false,
+      forwardLocked: false,
       resizeTimer: null,
       rangeTimer: null,
       statusTimer: null,
@@ -1274,6 +1275,7 @@
 
       state.turnReady = false;
       state.isTurning = false;
+      state.forwardLocked = false;
       state.visibleIndices = [];
       els.book.innerHTML = "";
       els.book.removeAttribute("style");
@@ -1363,7 +1365,15 @@
       if (index < 0 || index >= state.totalPages) return true;
 
       const cached = state.pageCache.get(index);
-      return !!(cached && cached.key === getRenderKey());
+      if (cached && cached.key === getRenderKey()) return true;
+
+      // If the page is already visibly rendered in the book, treat it as ready.
+      // This keeps button navigation consistent with what the user sees.
+      return getPageNodes(index).some((node) => {
+        const img = node.querySelector("img.pdf-img");
+        return node.classList.contains("is-rendered") &&
+          !!(img && img.getAttribute("src"));
+      });
     }
 
     function arePagesRenderReady(indices) {
@@ -1390,15 +1400,20 @@
       const readMode = state.zoom > 1.001;
       const spreadReady = isCurrentSpreadReady();
 
-      // Going back is always safe. Moving forward is allowed only after every
-      // currently visible page has finished rendering.
+      // A forward lock is released automatically the moment the spread that
+      // the user landed on has completely rendered.
+      if (state.forwardLocked && spreadReady) {
+        state.forwardLocked = false;
+      }
+
       els.prevBtn.disabled = atStart;
       els.firstBtn.disabled = atStart;
-      els.nextBtn.disabled = atEnd || !spreadReady;
-      els.lastBtn.disabled = atEnd || !spreadReady;
+      els.nextBtn.disabled = atEnd || state.forwardLocked;
+      els.lastBtn.disabled = atEnd || state.forwardLocked;
 
-      // Slider stays disabled in zoom/read mode and while the current spread is loading.
-      els.pageRange.disabled = readMode || !spreadReady;
+      // Slider is disabled in read mode or while we are intentionally waiting
+      // on a newly-entered loading spread.
+      els.pageRange.disabled = readMode || state.forwardLocked;
     }
 
     function showSpreadLoadingStatus() {
@@ -1624,11 +1639,13 @@
               return;
             }
 
-            // One-spread-at-a-time rule:
-            // allow one forward turn from a fully rendered spread, but once the
-            // user lands on a loading spread do not allow another forward turn
-            // until every visible page is ready. Backward remains available.
-            if (corner === "tr" && !isCurrentSpreadReady()) {
+            const isForwardTurn = !!(
+              pageObject &&
+              Number(pageObject.next) > Number(pageObject.page)
+            );
+
+            // Manual drag and toolbar buttons share the same explicit lock.
+            if (isForwardTurn && state.forwardLocked) {
               event.preventDefault();
               showSpreadLoadingStatus();
               refreshNavigationAvailability();
@@ -1649,8 +1666,21 @@
           turning: function (event, page, view) {
             state.isTurning = true;
             playPageFlipSound();
-            syncFromTurn(page, view, false);
-            renderIndices(normalizeView(view, page), false).catch(() => {});
+
+            const destinationPage = clamp(Number(page || 1), 1, state.totalPages);
+            const movingForward = destinationPage - 1 > state.currentPage;
+            const destinationVisible = normalizeView(view, destinationPage);
+
+            if (movingForward && !arePagesRenderReady(destinationVisible)) {
+              state.forwardLocked = true;
+            }
+
+            syncFromTurn(destinationPage, view, false);
+            refreshNavigationAvailability();
+
+            renderIndices(destinationVisible, false)
+              .then(refreshNavigationAvailability)
+              .catch(() => refreshNavigationAvailability());
           },
 
           turned: function (event, page, view) {
@@ -1729,6 +1759,7 @@
 
         setProgress(100, "Ready");
         state.isReady = true;
+        state.forwardLocked = false;
         syncFromTurn(
           window.jQuery(els.book).turn("page"),
           window.jQuery(els.book).turn("view"),
@@ -1771,13 +1802,14 @@
     function nextPage() {
       if (!state.turnReady || !state.isReady || state.isTurning) return;
 
-      if (!isCurrentSpreadReady()) {
+      if (state.forwardLocked) {
         showSpreadLoadingStatus();
         refreshNavigationAvailability();
         return;
       }
 
-      // Warm the next spread in parallel, then turn immediately.
+      // Always allow this one forward action immediately. If the destination
+      // spread is still rendering, the turning event will lock the next one.
       prepareDirection(1);
 
       try {
@@ -1800,7 +1832,7 @@
 
       const safe = clamp(index, 0, state.totalPages - 1);
 
-      if (safe > state.currentPage && !isCurrentSpreadReady()) {
+      if (safe > state.currentPage && state.forwardLocked) {
         showSpreadLoadingStatus();
         refreshNavigationAvailability();
         return;
