@@ -1980,12 +1980,14 @@
       }, 180);
     }
 
-    function mobileGoToPage(index) {
+    function mobileGoToPage(index, options = {}) {
+      const fromPeel = !!options.fromPeel;
+
       if (
         !state.mobile.active ||
         !state.mobile.turnReady ||
         !state.isReady ||
-        isMobileBookActuallyAnimating()
+        (!fromPeel && isMobileBookActuallyAnimating())
       ) {
         return false;
       }
@@ -2164,7 +2166,7 @@
         !(target > state.currentPage && state.forwardLocked)
       ) {
         // Keep the peeled corner as the starting point for the real Turn.js fold.
-        mobileGoToPage(target);
+        mobileGoToPage(target, { fromPeel: true });
         state.mobile.peelCorner = "";
       } else {
         clearMobilePeel();
