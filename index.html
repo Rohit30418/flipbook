@@ -14,7 +14,8 @@
     3) A browser viewer cannot fully protect a paid PDF. Use login + signed URLs + server-side access checks.
   -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
+  <script src="vendor/jquery-1.12.4.min.js"></script>
+  <script src="vendor/turn.min.js"></script>
 
   <style>
     :root {
@@ -216,9 +217,10 @@
       cursor: default;
     }
 
-    #book.corner-ready { cursor: grab; }
-    #book.corner-ready:active,
-    #book.is-flipping { cursor: grabbing; }
+    #book .page,
+    #book .turn-page {
+      background: #fff !important;
+    }
 
     .page {
       position: relative;
@@ -226,10 +228,6 @@
       overflow: hidden;
       display: grid;
       place-items: center;
-      isolation: isolate;
-      backface-visibility: hidden;
-      -webkit-backface-visibility: hidden;
-      transform: translateZ(0);
     }
 
     .page::before {
@@ -253,29 +251,10 @@
       -webkit-user-drag: none;
       opacity: 0;
       background: #fff;
-      backface-visibility: hidden;
-      -webkit-backface-visibility: hidden;
-      transform: translateZ(0);
-      transition: none;
+      transition: opacity 0.12s ease;
     }
 
     .page.is-rendered .pdf-img { opacity: 1; }
-
-    /* Keep PageFlip's moving sheet layers opaque. This prevents the page below
-       from bleeding through during reverse / previous-page turns. */
-    #book .stf__item,
-    #book .stf__block,
-    #book .stf__page {
-      background-color: #fff !important;
-      backface-visibility: hidden;
-      -webkit-backface-visibility: hidden;
-    }
-
-    #book .stf__item .page,
-    #book .stf__block .page,
-    #book .stf__page .page {
-      background-color: #fff !important;
-    }
 
     .page-status {
       position: absolute;
@@ -705,7 +684,7 @@
     const CONFIG = Object.freeze({
       defaultPdf: "iopepc.pdf",
       defaultTitle: "Premium Flipbook",
-      defaultSubTitle: "Lazy HD PDF viewer with 3D page flip",
+      defaultSubTitle: "Lazy HD PDF viewer with premium page turn",
       minZoom: 0.65,
       maxZoom: 3,
       zoomStep: 0.15,
@@ -714,10 +693,12 @@
       maxCanvasPixels: 14000000,
       mobileMaxCanvasPixels: 7600000,
       jpegQuality: { hd: 0.88, ultra: 0.93 },
-      desktopCacheLimit: 14,
-      mobileCacheLimit: 8,
-      maxPrefetchRange: 3,
-      renderIdleDelay: 90
+      desktopCacheLimit: 16,
+      mobileCacheLimit: 9,
+      maxPrefetchRange: 4,
+      renderIdleDelay: 70,
+      turnDuration: 820,
+      turnElevation: 72
     });
 
     const els = {
@@ -755,58 +736,33 @@
     };
 
     const controls = [
-      els.fitBtn,
-      els.fullBtn,
-      els.prevBtn,
-      els.nextBtn,
-      els.firstBtn,
-      els.lastBtn,
-      els.sidePrev,
-      els.sideNext,
-      els.zoomInBtn,
-      els.zoomOutBtn,
-      els.resetZoomBtn,
-      els.qualityBtn,
-      els.pageRange
+      els.fitBtn, els.fullBtn, els.prevBtn, els.nextBtn, els.firstBtn, els.lastBtn,
+      els.sidePrev, els.sideNext, els.zoomInBtn, els.zoomOutBtn, els.resetZoomBtn,
+      els.qualityBtn, els.pageRange
     ];
 
     const state = {
       pdfUrl: "",
-      pageFlip: null,
       pdfDoc: null,
       totalPages: 0,
       currentPage: 0,
+      visibleIndices: [],
+      turnReady: false,
+      isTurning: false,
       zoom: 1,
       fitMode: "width",
       qualityMode: "ultra",
       pageRatio: 1.414,
-      pageElements: [],
       pageCache: new Map(),
       renderPromises: new Map(),
       renderJobId: 0,
       isReady: false,
-      isFlipping: false,
-      drag: {
-        active: false,
-        pointerId: null,
-        topZoneRatio: 0.36,
-        sideZoneRatio: 0.24,
-        maxYRatio: 0.42
-      },
       resizeTimer: null,
       rangeTimer: null,
       statusTimer: null,
       zoomRenderTimer: null,
-      pinch: {
-        active: false,
-        startDistance: 0,
-        startZoom: 1
-      },
-      settings: {
-        prefetchRange: 1,
-        cacheLimit: 0,
-        downloadEnabled: true
-      }
+      pinch: { active: false, startDistance: 0, startZoom: 1 },
+      settings: { prefetchRange: 2, cacheLimit: 0, downloadEnabled: true }
     };
 
     function isMobile() {
@@ -816,10 +772,6 @@
     function clamp(value, min, max) {
       const number = Number(value);
       return Math.min(Math.max(Number.isFinite(number) ? number : min, min), max);
-    }
-
-    function idle(ms = 0) {
-      return new Promise((resolve) => window.setTimeout(resolve, ms));
     }
 
     function getQueryParam(name) {
@@ -863,7 +815,8 @@
 
     function showError(error) {
       const message = error && error.message ? error.message : String(error || "Unknown error");
-      els.errorMessage.innerHTML = "Check PDF path, CORS, file permission, CDN files, or PDF corruption.<span class='error-detail'></span>";
+      els.errorMessage.innerHTML =
+        "Check PDF path, CORS, file permission, local vendor files, or PDF corruption.<span class='error-detail'></span>";
       els.errorMessage.querySelector(".error-detail").textContent = message;
       hideLoader();
       els.errorBox.classList.remove("hide");
@@ -901,9 +854,9 @@
     }
 
     function applySettingsFromQuery() {
-      state.settings.prefetchRange = clamp(getQueryParam("prefetch") ?? 1, 0, CONFIG.maxPrefetchRange);
+      state.settings.prefetchRange = clamp(getQueryParam("prefetch") ?? 2, 1, CONFIG.maxPrefetchRange);
       const defaultCache = isMobile() ? CONFIG.mobileCacheLimit : CONFIG.desktopCacheLimit;
-      state.settings.cacheLimit = clamp(getQueryParam("cache") ?? defaultCache, 4, 30);
+      state.settings.cacheLimit = clamp(getQueryParam("cache") ?? defaultCache, 6, 36);
       state.settings.downloadEnabled = getQueryParam("download") !== "0";
 
       if (!state.settings.downloadEnabled) {
@@ -912,12 +865,17 @@
       }
     }
 
-    function setupPdfJs() {
-      if (!window.pdfjsLib) throw new Error("PDF.js did not load. Host pdf.min.js locally or check CDN/network.");
-      if (!window.St || typeof window.St.PageFlip !== "function") {
-        throw new Error("PageFlip library did not load. Host page-flip.browser.min.js locally or check CDN/network.");
+    function setupLibraries() {
+      if (!window.pdfjsLib) {
+        throw new Error("PDF.js did not load.");
       }
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+      if (!window.jQuery || !window.jQuery.fn || typeof window.jQuery.fn.turn !== "function") {
+        throw new Error("Turn.js did not load. Check vendor/jquery-1.12.4.min.js and vendor/turn.min.js.");
+      }
+
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
     }
 
     function getZoomBucket() {
@@ -931,8 +889,12 @@
     }
 
     function getRenderWidth() {
-      const base = isMobile() ? CONFIG.mobileRenderWidth[state.qualityMode] : CONFIG.renderWidth[state.qualityMode];
-      const zoomMultiplier = getZoomBucket() === 3 ? 1.65 : getZoomBucket() === 2 ? 1.32 : 1;
+      const base = isMobile()
+        ? CONFIG.mobileRenderWidth[state.qualityMode]
+        : CONFIG.renderWidth[state.qualityMode];
+
+      const bucket = getZoomBucket();
+      const zoomMultiplier = bucket === 3 ? 1.65 : bucket === 2 ? 1.32 : 1;
       return Math.round(base * zoomMultiplier);
     }
 
@@ -968,9 +930,14 @@
         }
       }
 
+      pageW = Math.max(260, Math.floor(pageW));
+      pageH = Math.max(360, Math.floor(pageH));
+
       return {
-        width: Math.max(260, Math.floor(pageW)),
-        height: Math.max(360, Math.floor(pageH))
+        pageWidth: pageW,
+        pageHeight: pageH,
+        bookWidth: mobile ? pageW : pageW * 2,
+        bookHeight: pageH
       };
     }
 
@@ -978,18 +945,50 @@
       return Array.from(document.querySelectorAll('.page[data-page-index="' + index + '"]'));
     }
 
+    function normalizeView(view, fallbackPage) {
+      const values = Array.isArray(view) ? view : [];
+      const result = values
+        .map(Number)
+        .filter((page) => page >= 1 && page <= state.totalPages)
+        .map((page) => page - 1);
+
+      if (result.length) return Array.from(new Set(result));
+
+      const safe = clamp(Number(fallbackPage || 1) - 1, 0, Math.max(0, state.totalPages - 1));
+      return [safe];
+    }
+
+    function currentTurnView() {
+      if (!state.turnReady) return state.visibleIndices.slice();
+
+      try {
+        return normalizeView(window.jQuery(els.book).turn("view"), window.jQuery(els.book).turn("page"));
+      } catch (_) {
+        return state.visibleIndices.slice();
+      }
+    }
+
     function getVisibleIndices(index = state.currentPage) {
       if (!state.totalPages) return [];
+
+      if (index === state.currentPage) {
+        const live = currentTurnView();
+        if (live.length) return live;
+      }
+
       const safe = clamp(index, 0, state.totalPages - 1);
-      const visible = new Set([safe]);
-      if (!isMobile() && safe + 1 < state.totalPages) visible.add(safe + 1);
-      return Array.from(visible);
+
+      if (isMobile()) return [safe];
+
+      const left = safe % 2 === 0 ? Math.max(0, safe - 1) : safe;
+      const right = left + 1 < state.totalPages ? left + 1 : null;
+      return right === null ? [left] : [left, right];
     }
 
     function getPrefetchIndices(index = state.currentPage) {
       const visible = getVisibleIndices(index);
       const pages = new Set(visible);
-      const range = Math.max(state.settings.prefetchRange, isMobile() ? 1 : 2);
+      const range = state.settings.prefetchRange;
 
       visible.forEach((pageIndex) => {
         for (let offset = 1; offset <= range; offset++) {
@@ -1030,29 +1029,37 @@
     }
 
     function destroyFlipbook() {
-      if (state.pageFlip && typeof state.pageFlip.destroy === "function") {
-        state.pageFlip.destroy();
+      if (state.turnReady) {
+        try {
+          window.jQuery(els.book).turn("destroy");
+        } catch (_) {}
       }
-      state.pageFlip = null;
-      state.isFlipping = false;
-      state.drag.active = false;
-      state.drag.pointerId = null;
-      els.book.classList.remove("is-flipping", "corner-ready");
-      state.pageElements = [];
+
+      state.turnReady = false;
+      state.isTurning = false;
+      state.visibleIndices = [];
       els.book.innerHTML = "";
+      els.book.removeAttribute("style");
     }
 
     function clearCache() {
       state.renderPromises.clear();
+
       state.pageCache.forEach((entry) => {
         if (entry && entry.url) URL.revokeObjectURL(entry.url);
       });
+
       state.pageCache.clear();
-      state.pageElements.forEach((_, index) => clearPageImage(index));
+
+      for (let index = 0; index < state.totalPages; index++) {
+        clearPageImage(index);
+      }
     }
 
     function evictCache() {
-      const limit = state.settings.cacheLimit || (isMobile() ? CONFIG.mobileCacheLimit : CONFIG.desktopCacheLimit);
+      const limit = state.settings.cacheLimit ||
+        (isMobile() ? CONFIG.mobileCacheLimit : CONFIG.desktopCacheLimit);
+
       if (state.pageCache.size <= limit) return;
 
       const protectedPages = new Set(getPrefetchIndices(state.currentPage));
@@ -1063,6 +1070,7 @@
       while (state.pageCache.size > limit && entries.length) {
         const [index, entry] = entries.shift();
         if (!entry) continue;
+
         URL.revokeObjectURL(entry.url);
         state.pageCache.delete(index);
         clearPageImage(index);
@@ -1073,6 +1081,7 @@
       const baseViewport = page.getViewport({ scale: 1 });
       let scale = targetWidth / baseViewport.width;
       let viewport = page.getViewport({ scale });
+
       const maxPixels = getMaxCanvasPixels();
       const currentPixels = viewport.width * viewport.height;
 
@@ -1083,21 +1092,26 @@
 
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d", { alpha: false, willReadFrequently: false });
-      if (!ctx) throw new Error("Canvas 2D context is not available in this browser.");
+      if (!ctx) throw new Error("Canvas 2D context is not available.");
 
       canvas.width = Math.max(1, Math.floor(viewport.width));
       canvas.height = Math.max(1, Math.floor(viewport.height));
+
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const renderTask = page.render({
         canvasContext: ctx,
-        viewport,
+        viewport: viewport,
         background: "rgb(255,255,255)"
       });
+
       await renderTask.promise;
 
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", quality)
+      );
+
       canvas.width = 1;
       canvas.height = 1;
       page.cleanup();
@@ -1112,27 +1126,40 @@
 
       const key = getRenderKey();
       const cached = state.pageCache.get(index);
+
       if (cached && cached.key === key) {
         cached.lastUsed = Date.now();
         updatePageImage(index, cached.url);
         return cached.url;
       }
 
-      if (state.renderPromises.has(index)) return state.renderPromises.get(index);
+      if (state.renderPromises.has(index)) {
+        return state.renderPromises.get(index);
+      }
 
       const jobId = state.renderJobId;
+
       const promise = (async () => {
         try {
           setPageState(index, "rendering", "Loading page " + (index + 1));
-          if (options.priority) showStatus("Rendering page " + (index + 1) + "...");
+
+          if (options.priority) {
+            showStatus("Rendering page " + (index + 1) + "...");
+          }
 
           const page = await state.pdfDoc.getPage(index + 1);
+
           if (jobId !== state.renderJobId) {
             page.cleanup();
             throw new Error("Rendering cancelled.");
           }
 
-          const url = await renderPageToUrl(page, getRenderWidth(), CONFIG.jpegQuality[state.qualityMode]);
+          const url = await renderPageToUrl(
+            page,
+            getRenderWidth(),
+            CONFIG.jpegQuality[state.qualityMode]
+          );
+
           if (jobId !== state.renderJobId) {
             URL.revokeObjectURL(url);
             throw new Error("Rendering cancelled.");
@@ -1141,7 +1168,12 @@
           const oldEntry = state.pageCache.get(index);
           if (oldEntry && oldEntry.url) URL.revokeObjectURL(oldEntry.url);
 
-          state.pageCache.set(index, { url, key, lastUsed: Date.now() });
+          state.pageCache.set(index, {
+            url: url,
+            key: key,
+            lastUsed: Date.now()
+          });
+
           updatePageImage(index, url);
           evictCache();
           return url;
@@ -1158,46 +1190,64 @@
       return promise;
     }
 
-    async function renderVisiblePages(index = state.currentPage) {
-      const visible = getVisibleIndices(index);
-      await Promise.all(visible.map((pageIndex) => ensurePageRendered(pageIndex, { priority: true }).catch((error) => {
-        console.error(error);
-        showError(error);
-      })));
+    async function renderIndices(indices, priority) {
+      const unique = Array.from(new Set(indices))
+        .filter((index) => index >= 0 && index < state.totalPages);
+
+      await Promise.all(
+        unique.map((index) =>
+          ensurePageRendered(index, { priority: !!priority }).catch((error) => {
+            console.error(error);
+            if (priority) showError(error);
+            return null;
+          })
+        )
+      );
     }
 
-    function schedulePrefetch(index = state.currentPage) {
-      const pages = getPrefetchIndices(index).filter((pageIndex) => !getVisibleIndices(index).includes(pageIndex));
+    async function renderVisiblePages() {
+      await renderIndices(getVisibleIndices(), true);
+    }
+
+    function schedulePrefetch() {
+      const pages = getPrefetchIndices()
+        .filter((pageIndex) => !getVisibleIndices().includes(pageIndex));
+
       let delay = CONFIG.renderIdleDelay;
+
       pages.forEach((pageIndex) => {
         window.setTimeout(() => {
           if (!state.isReady) return;
-          ensurePageRendered(pageIndex, { priority: false }).catch((error) => console.warn(error));
+          ensurePageRendered(pageIndex, { priority: false }).catch(() => {});
         }, delay);
+
         delay += CONFIG.renderIdleDelay;
       });
     }
 
-    function syncPage(index) {
-      if (!state.totalPages) {
-        state.currentPage = 0;
-        els.pageRange.value = "0";
-        els.pageText.textContent = "0 / 0";
-        return;
-      }
+    function syncFromTurn(page, view, renderNow) {
+      if (!state.totalPages) return;
 
-      state.currentPage = clamp(index, 0, state.totalPages - 1);
+      const safePage = clamp(Number(page || 1), 1, state.totalPages);
+      const visible = normalizeView(view, safePage);
+
+      state.currentPage = safePage - 1;
+      state.visibleIndices = visible;
+
       els.pageRange.value = String(state.currentPage);
 
-      const visible = getVisibleIndices(state.currentPage);
-      if (!isMobile() && visible.length === 2) {
-        els.pageText.textContent = (visible[0] + 1) + "-" + (visible[1] + 1) + " / " + state.totalPages;
+      if (!isMobile() && visible.length > 1) {
+        els.pageText.textContent =
+          (visible[0] + 1) + "-" + (visible[visible.length - 1] + 1) +
+          " / " + state.totalPages;
       } else {
-        els.pageText.textContent = (state.currentPage + 1) + " / " + state.totalPages;
+        els.pageText.textContent =
+          (visible[0] + 1) + " / " + state.totalPages;
       }
 
-      const atStart = state.currentPage <= 0;
-      const atEnd = state.currentPage >= state.totalPages - 1;
+      const atStart = safePage <= 1;
+      const atEnd = safePage >= state.totalPages;
+
       els.prevBtn.disabled = atStart;
       els.firstBtn.disabled = atStart;
       els.sidePrev.disabled = atStart;
@@ -1205,51 +1255,15 @@
       els.lastBtn.disabled = atEnd;
       els.sideNext.disabled = atEnd;
 
-      if (state.isReady) {
-        renderVisiblePages(state.currentPage).then(() => schedulePrefetch(state.currentPage));
+      if (renderNow && state.isReady) {
+        renderVisiblePages().then(schedulePrefetch);
       }
-    }
-
-    function applyZoom() {
-      state.zoom = clamp(state.zoom, CONFIG.minZoom, CONFIG.maxZoom);
-      els.bookWrap.style.transform = "scale(" + state.zoom + ")";
-      els.zoomValue.textContent = Math.round(state.zoom * 100) + "%";
-
-      if (state.zoom > 1.02) {
-        els.viewer.classList.add("is-zoomed");
-      } else {
-        els.viewer.classList.remove("is-zoomed");
-        els.viewer.scrollTo({ left: 0, top: 0, behavior: "smooth" });
-      }
-
-      window.clearTimeout(state.zoomRenderTimer);
-      state.zoomRenderTimer = window.setTimeout(() => {
-        renderVisiblePages(state.currentPage).then(() => schedulePrefetch(state.currentPage));
-      }, 180);
-    }
-
-    function zoomIn() {
-      state.zoom += CONFIG.zoomStep;
-      applyZoom();
-    }
-
-    function zoomOut() {
-      state.zoom -= CONFIG.zoomStep;
-      applyZoom();
-    }
-
-    function resetZoom() {
-      state.zoom = 1;
-      applyZoom();
     }
 
     function createPlaceholderPage(index) {
       const page = document.createElement("div");
       page.className = "page";
       page.dataset.pageIndex = String(index);
-
-      // Keep normal soft-paper density for a natural magazine-like page curl.
-      page.dataset.density = "soft";
 
       const img = document.createElement("img");
       img.className = "pdf-img";
@@ -1269,73 +1283,77 @@
     function buildFlipbook(startPage = 0) {
       destroyFlipbook();
 
-      const safeStartPage = clamp(startPage, 0, Math.max(state.totalPages - 1, 0));
+      const safeStart = clamp(startPage, 0, Math.max(0, state.totalPages - 1));
       const size = getBookSize();
       const fragment = document.createDocumentFragment();
 
-      state.pageElements = [];
       for (let index = 0; index < state.totalPages; index++) {
-        const page = createPlaceholderPage(index);
-        state.pageElements.push(page);
-        fragment.appendChild(page);
+        fragment.appendChild(createPlaceholderPage(index));
       }
+
       els.book.appendChild(fragment);
+      els.book.style.width = size.bookWidth + "px";
+      els.book.style.height = size.bookHeight + "px";
 
-      state.pageFlip = new St.PageFlip(els.book, {
-        width: size.width,
-        height: size.height,
-        size: "fixed",
-        minWidth: 260,
-        maxWidth: 2400,
-        minHeight: 360,
-        maxHeight: 2600,
-        showCover: false,
-        usePortrait: isMobile(),
-        drawShadow: true,
-        maxShadowOpacity: 0.34,
-        flippingTime: 760,
-        mobileScrollSupport: false,
-        startPage: safeStartPage,
-        clickEventForward: false,
+      const $book = window.jQuery(els.book);
 
-        // Pointer handling is driven by our custom controller below.
-        // We still use StPageFlip's native folding math via its public API,
-        // but every drag is constrained to TOP-corner geometry.
-        useMouseEvents: false,
-        showPageCorners: true,
-        disableFlipByClick: true
-      });
+      $book.turn({
+        width: size.bookWidth,
+        height: size.bookHeight,
+        display: isMobile() ? "single" : "double",
+        page: safeStart + 1,
+        pages: state.totalPages,
+        autoCenter: true,
+        acceleration: true,
+        gradients: true,
+        elevation: CONFIG.turnElevation,
+        duration: CONFIG.turnDuration,
 
-      state.pageFlip.loadFromHTML(els.book.querySelectorAll(".page"));
+        // This is the important difference from the old engine:
+        // only top-left and top-right can physically start a page fold.
+        turnCorners: "tl,tr",
 
-      state.pageFlip.on("changeState", (event) => {
-        const mode = String(event.data || "").toLowerCase();
+        when: {
+          start: function (event, pageObject, corner) {
+            if (corner && corner !== "tl" && corner !== "tr") {
+              event.preventDefault();
+              return;
+            }
 
-        // user_fold is our live drag; flipping is the release animation.
-        state.isFlipping = mode === "flipping";
+            state.isTurning = true;
 
-        if (mode === "read") {
-          state.drag.active = false;
-          state.drag.pointerId = null;
-          els.book.classList.remove("is-flipping");
+            const candidates = [];
+            if (pageObject && pageObject.page) candidates.push(pageObject.page - 1);
+            if (pageObject && pageObject.next) candidates.push(pageObject.next - 1);
+
+            candidates.forEach((index) => {
+              ensurePageRendered(index, { priority: false }).catch(() => {});
+            });
+          },
+
+          turning: function (event, page, view) {
+            state.isTurning = true;
+            syncFromTurn(page, view, false);
+            renderIndices(normalizeView(view, page), false).catch(() => {});
+          },
+
+          turned: function (event, page, view) {
+            state.isTurning = false;
+            syncFromTurn(page, view, true);
+          },
+
+          end: function () {
+            state.isTurning = false;
+          }
         }
       });
 
-      state.pageFlip.on("flip", (event) => {
-        state.isFlipping = false;
-        syncPage(event.data);
-      });
+      state.turnReady = true;
 
-      state.pageFlip.on("changeOrientation", () => {
-        state.isFlipping = false;
-        syncPage(state.currentPage);
-      });
-
-      window.setTimeout(() => {
-        if (state.pageFlip && safeStartPage > 0) state.pageFlip.turnToPage(safeStartPage);
-        syncPage(safeStartPage);
-        applyZoom();
-      }, 80);
+      const currentPage = Number($book.turn("page")) || (safeStart + 1);
+      const currentView = $book.turn("view");
+      syncFromTurn(currentPage, currentView, false);
+      applyZoom();
     }
 
     async function loadPdfMeta() {
@@ -1356,8 +1374,8 @@
       els.pageRange.max = String(Math.max(state.totalPages - 1, 0));
 
       const firstPage = await pdf.getPage(1);
-      const firstViewport = firstPage.getViewport({ scale: 1 });
-      state.pageRatio = firstViewport.height / firstViewport.width;
+      const viewport = firstPage.getViewport({ scale: 1 });
+      state.pageRatio = viewport.height / viewport.width;
       firstPage.cleanup();
     }
 
@@ -1365,29 +1383,43 @@
       state.renderJobId++;
       state.isReady = false;
       setControlsDisabled(true);
-      showLoader("Opening flipbook", "Loading PDF metadata first, then rendering only current pages.");
+      showLoader(
+        "Opening flipbook",
+        "Loading the PDF and preparing the visible pages."
+      );
       setProgress(8, "Loading PDF...");
 
       try {
         if (state.pdfDoc && typeof state.pdfDoc.destroy === "function") {
           await state.pdfDoc.destroy().catch(() => {});
         }
+
         state.pdfDoc = null;
         clearCache();
         destroyFlipbook();
 
         await loadPdfMeta();
-        setProgress(45, "Building page shell...");
+
+        setProgress(42, "Building premium page-turn viewer...");
         buildFlipbook(startPage);
 
-        setProgress(68, "Rendering current page...");
-        await renderVisiblePages(startPage);
+        setProgress(66, "Rendering visible pages...");
+        await renderVisiblePages();
+
+        const warm = getPrefetchIndices();
+        setProgress(84, "Preparing nearby pages...");
+        await renderIndices(warm.slice(0, isMobile() ? 3 : 6), false);
 
         setProgress(100, "Ready");
         state.isReady = true;
-        syncPage(startPage);
-        schedulePrefetch(startPage);
-        window.setTimeout(hideLoader, 260);
+        syncFromTurn(
+          window.jQuery(els.book).turn("page"),
+          window.jQuery(els.book).turn("view"),
+          true
+        );
+        schedulePrefetch();
+
+        window.setTimeout(hideLoader, 220);
       } catch (error) {
         console.error(error);
         state.isReady = false;
@@ -1395,195 +1427,96 @@
         showError(error);
       } finally {
         setControlsDisabled(false);
-        syncPage(state.currentPage);
       }
     }
 
-    async function preparePhysicalFlip(direction) {
-      const current = state.currentPage;
-      const candidates = isMobile()
-        ? [current, current + direction]
-        : direction > 0
-          ? [current, current + 1, current + 2, current + 3]
-          : [current - 2, current - 1, current, current + 1];
+    async function prepareDirection(direction) {
+      if (!state.turnReady) return;
 
-      const valid = Array.from(new Set(candidates))
-        .filter((index) => index >= 0 && index < state.totalPages);
+      const current = currentTurnView();
+      const candidates = new Set(current);
 
-      await Promise.all(
-        valid.map((index) =>
-          ensurePageRendered(index, { priority: false }).catch(() => null)
-        )
-      );
+      current.forEach((index) => {
+        for (let offset = 1; offset <= 2; offset++) {
+          const target = index + (direction * offset);
+          if (target >= 0 && target < state.totalPages) {
+            candidates.add(target);
+          }
+        }
+      });
+
+      await renderIndices(Array.from(candidates), false);
     }
 
     async function nextPage() {
-      if (!state.pageFlip || !state.isReady || state.isFlipping) return;
+      if (!state.turnReady || !state.isReady || state.isTurning) return;
 
-      state.isFlipping = true;
+      await prepareDirection(1);
+
       try {
-        await preparePhysicalFlip(1);
-        state.pageFlip.flipNext("top");
-      } catch (error) {
-        state.isFlipping = false;
-        console.warn(error);
-      }
+        window.jQuery(els.book).turn("next");
+      } catch (_) {}
     }
 
     async function prevPage() {
-      if (!state.pageFlip || !state.isReady || state.isFlipping) return;
+      if (!state.turnReady || !state.isReady || state.isTurning) return;
 
-      state.isFlipping = true;
+      await prepareDirection(-1);
+
       try {
-        await preparePhysicalFlip(-1);
-        state.pageFlip.flipPrev("top");
-      } catch (error) {
-        state.isFlipping = false;
-        console.warn(error);
-      }
+        window.jQuery(els.book).turn("previous");
+      } catch (_) {}
     }
 
-    function goToPage(index) {
-      if (!state.pageFlip || !state.isReady || state.isFlipping) return;
+    async function goToPage(index) {
+      if (!state.turnReady || !state.isReady || state.isTurning) return;
+
       const safe = clamp(index, 0, state.totalPages - 1);
-      syncPage(safe);
-      state.pageFlip.turnToPage(safe);
-    }
+      const candidates = [safe];
 
-    function getBookInteractionRect() {
-      return els.book.getBoundingClientRect();
-    }
+      if (safe > 0) candidates.push(safe - 1);
+      if (safe + 1 < state.totalPages) candidates.push(safe + 1);
 
-    function isInsideBookPoint(clientX, clientY) {
-      const rect = getBookInteractionRect();
-      return clientX >= rect.left &&
-        clientX <= rect.right &&
-        clientY >= rect.top &&
-        clientY <= rect.bottom;
-    }
-
-    function isPremiumCornerPoint(clientX, clientY) {
-      const rect = getBookInteractionRect();
-      if (!rect.width || !rect.height) return false;
-
-      const localX = clientX - rect.left;
-      const localY = clientY - rect.top;
-
-      if (localX < 0 || localX > rect.width || localY < 0 || localY > rect.height) {
-        return false;
-      }
-
-      const topLimit = rect.height * state.drag.topZoneRatio;
-      const sideLimit = rect.width * state.drag.sideZoneRatio;
-
-      return localY <= topLimit &&
-        (localX <= sideLimit || localX >= rect.width - sideLimit);
-    }
-
-    function topConstrainedPoint(clientX, clientY) {
-      const rect = getBookInteractionRect();
-
-      // StPageFlip chooses TOP/BOTTOM from the Y coordinate. Never allow the
-      // controlled pointer to cross the middle of the book, so the engine can
-      // only create a TOP fold regardless of how far the real mouse moves down.
-      const maxY = rect.top + rect.height * state.drag.maxYRatio;
-      const minY = rect.top + 2;
-
-      return {
-        x: clientX,
-        y: clamp(clientY, minY, maxY)
-      };
-    }
-
-    function clearCornerPreview() {
-      if (!state.pageFlip || state.drag.active || state.isFlipping) return;
-
-      const rect = getBookInteractionRect();
-      if (!rect.width || !rect.height) return;
-
-      // Send an interior point so StPageFlip closes any open corner preview.
-      state.pageFlip.userMove({
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height * 0.25
-      }, false);
-
-      els.book.classList.remove("corner-ready");
-    }
-
-    function handleBookPointerMove(event) {
-      if (!state.pageFlip || !state.isReady || state.isFlipping) return;
-
-      const point = topConstrainedPoint(event.clientX, event.clientY);
-
-      if (state.drag.active) {
-        if (state.drag.pointerId !== null && event.pointerId !== state.drag.pointerId) return;
-        event.preventDefault();
-        state.pageFlip.userMove(point, event.pointerType === "touch");
-        return;
-      }
-
-      // Premium hover peel only appears in the real top outer corners.
-      if (event.pointerType === "mouse" && isPremiumCornerPoint(event.clientX, event.clientY)) {
-        els.book.classList.add("corner-ready");
-        state.pageFlip.userMove(point, false);
-      } else if (event.pointerType === "mouse") {
-        clearCornerPreview();
-      }
-    }
-
-    function handleBookPointerDown(event) {
-      if (!state.pageFlip || !state.isReady || state.isFlipping) return;
-      if (!isPremiumCornerPoint(event.clientX, event.clientY)) return;
-
-      event.preventDefault();
-
-      state.drag.active = true;
-      state.drag.pointerId = event.pointerId;
-      els.book.classList.add("is-flipping", "corner-ready");
+      await renderIndices(candidates, false);
 
       try {
-        els.viewer.setPointerCapture(event.pointerId);
+        window.jQuery(els.book).turn("page", safe + 1);
       } catch (_) {}
-
-      state.pageFlip.startUserTouch(
-        topConstrainedPoint(event.clientX, event.clientY)
-      );
     }
 
-    function handleBookPointerUp(event) {
-      if (!state.pageFlip || !state.drag.active) return;
-      if (state.drag.pointerId !== null && event.pointerId !== state.drag.pointerId) return;
+    function applyZoom() {
+      state.zoom = clamp(state.zoom, CONFIG.minZoom, CONFIG.maxZoom);
+      els.bookWrap.style.transform = "scale(" + state.zoom + ")";
+      els.zoomValue.textContent = Math.round(state.zoom * 100) + "%";
 
-      event.preventDefault();
+      if (state.zoom > 1.02) {
+        els.viewer.classList.add("is-zoomed");
+      } else {
+        els.viewer.classList.remove("is-zoomed");
+        els.viewer.scrollTo({ left: 0, top: 0, behavior: "smooth" });
+      }
 
-      const point = topConstrainedPoint(event.clientX, event.clientY);
-      state.pageFlip.userStop(point, false);
+      window.clearTimeout(state.zoomRenderTimer);
 
-      try {
-        els.viewer.releasePointerCapture(event.pointerId);
-      } catch (_) {}
-
-      state.drag.active = false;
-      state.drag.pointerId = null;
-      els.book.classList.remove("is-flipping", "corner-ready");
+      state.zoomRenderTimer = window.setTimeout(() => {
+        if (!state.isReady) return;
+        renderVisiblePages().then(schedulePrefetch);
+      }, 180);
     }
 
-    function handleBookPointerCancel(event) {
-      if (!state.drag.active) return;
+    function zoomIn() {
+      state.zoom += CONFIG.zoomStep;
+      applyZoom();
+    }
 
-      const rect = getBookInteractionRect();
-      const point = {
-        x: rect.left + rect.width / 2,
-        y: rect.top + Math.max(2, rect.height * 0.2)
-      };
+    function zoomOut() {
+      state.zoom -= CONFIG.zoomStep;
+      applyZoom();
+    }
 
-      try {
-        if (state.pageFlip) state.pageFlip.userStop(point, false);
-      } catch (_) {}
-
-      state.drag.active = false;
-      state.drag.pointerId = null;
-      els.book.classList.remove("is-flipping", "corner-ready");
+    function resetZoom() {
+      state.zoom = 1;
+      applyZoom();
     }
 
     function distanceBetweenTouches(touchA, touchB) {
@@ -1597,25 +1530,15 @@
       els.sidePrev.addEventListener("click", prevPage);
       els.nextBtn.addEventListener("click", nextPage);
       els.sideNext.addEventListener("click", nextPage);
-
-      // Premium page interaction: custom controller drives StPageFlip's public
-      // fold API while constraining Y to TOP-corner geometry.
-      els.viewer.addEventListener("pointermove", handleBookPointerMove, { passive: false });
-      els.viewer.addEventListener("pointerdown", handleBookPointerDown, { passive: false });
-      els.viewer.addEventListener("pointerup", handleBookPointerUp, { passive: false });
-      els.viewer.addEventListener("pointercancel", handleBookPointerCancel, { passive: false });
-      els.viewer.addEventListener("pointerleave", (event) => {
-        if (!state.drag.active) clearCornerPreview();
-      }, { passive: true });
-
       els.firstBtn.addEventListener("click", () => goToPage(0));
       els.lastBtn.addEventListener("click", () => goToPage(state.totalPages - 1));
 
       els.pageRange.addEventListener("input", function () {
         const target = Number(this.value);
         els.pageText.textContent = (target + 1) + " / " + state.totalPages;
+
         window.clearTimeout(state.rangeTimer);
-        state.rangeTimer = window.setTimeout(() => goToPage(target), 90);
+        state.rangeTimer = window.setTimeout(() => goToPage(target), 110);
       });
 
       els.zoomInBtn.addEventListener("click", zoomIn);
@@ -1623,23 +1546,35 @@
       els.resetZoomBtn.addEventListener("click", resetZoom);
 
       els.fitBtn.addEventListener("click", () => {
-        if (!state.isReady) return;
+        if (!state.isReady || !state.turnReady || state.isTurning) return;
+
         state.fitMode = state.fitMode === "width" ? "height" : "width";
-        els.fitBtn.textContent = state.fitMode === "width" ? "Fit Width" : "Fit Height";
+        els.fitBtn.textContent =
+          state.fitMode === "width" ? "Fit Width" : "Fit Height";
+
         const keepPage = state.currentPage;
         resetZoom();
         buildFlipbook(keepPage);
-        state.pageCache.forEach((entry, index) => updatePageImage(index, entry.url));
-        syncPage(keepPage);
+
+        state.pageCache.forEach((entry, index) => {
+          updatePageImage(index, entry.url);
+        });
+
+        renderVisiblePages().then(schedulePrefetch);
       });
 
       els.qualityBtn.addEventListener("click", async () => {
-        if (!state.isReady) return;
-        state.qualityMode = state.qualityMode === "ultra" ? "hd" : "ultra";
-        els.qualityBtn.textContent = state.qualityMode === "ultra" ? "Ultra HD" : "HD";
+        if (!state.isReady || state.isTurning) return;
+
+        state.qualityMode =
+          state.qualityMode === "ultra" ? "hd" : "ultra";
+
+        els.qualityBtn.textContent =
+          state.qualityMode === "ultra" ? "Ultra HD" : "HD";
+
         clearCache();
-        await renderVisiblePages(state.currentPage);
-        schedulePrefetch(state.currentPage);
+        await renderVisiblePages();
+        schedulePrefetch();
         showStatus(state.qualityMode.toUpperCase() + " mode applied");
       });
 
@@ -1658,14 +1593,20 @@
       });
 
       document.addEventListener("fullscreenchange", () => {
-        els.fullBtn.textContent = document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
+        els.fullBtn.textContent =
+          document.fullscreenElement ? "Exit Fullscreen" : "Fullscreen";
       });
 
-      els.retryBtn.addEventListener("click", () => loadFlipbook(state.currentPage));
+      els.retryBtn.addEventListener("click", () =>
+        loadFlipbook(state.currentPage)
+      );
 
       document.addEventListener("keydown", (event) => {
-        const tag = (event.target && event.target.tagName || "").toLowerCase();
+        const tag =
+          (event.target && event.target.tagName || "").toLowerCase();
+
         if (["input", "textarea", "select"].includes(tag)) return;
+
         if (event.key === "ArrowRight") nextPage();
         if (event.key === "ArrowLeft") prevPage();
         if (event.key === "+" || event.key === "=") zoomIn();
@@ -1687,17 +1628,27 @@
 
       els.viewer.addEventListener("touchstart", (event) => {
         if (event.touches.length !== 2) return;
+
         state.pinch.active = true;
-        state.pinch.startDistance = distanceBetweenTouches(event.touches[0], event.touches[1]);
+        state.pinch.startDistance =
+          distanceBetweenTouches(event.touches[0], event.touches[1]);
         state.pinch.startZoom = state.zoom;
       }, { passive: true });
 
       els.viewer.addEventListener("touchmove", (event) => {
         if (!state.pinch.active || event.touches.length !== 2) return;
+
         event.preventDefault();
-        const currentDistance = distanceBetweenTouches(event.touches[0], event.touches[1]);
+
+        const currentDistance =
+          distanceBetweenTouches(event.touches[0], event.touches[1]);
+
         if (state.pinch.startDistance <= 0) return;
-        state.zoom = state.pinch.startZoom * (currentDistance / state.pinch.startDistance);
+
+        state.zoom =
+          state.pinch.startZoom *
+          (currentDistance / state.pinch.startDistance);
+
         applyZoom();
       }, { passive: false });
 
@@ -1707,18 +1658,26 @@
 
       window.addEventListener("resize", () => {
         window.clearTimeout(state.resizeTimer);
+
         state.resizeTimer = window.setTimeout(() => {
-          if (!state.isReady || !state.totalPages) return;
+          if (!state.isReady || !state.totalPages || state.isTurning) return;
+
           const keepPage = state.currentPage;
           buildFlipbook(keepPage);
-          state.pageCache.forEach((entry, index) => updatePageImage(index, entry.url));
+
+          state.pageCache.forEach((entry, index) => {
+            updatePageImage(index, entry.url);
+          });
+
           applyZoom();
-          syncPage(keepPage);
+          renderVisiblePages().then(schedulePrefetch);
         }, 220);
       });
 
       window.addEventListener("beforeunload", () => {
         clearCache();
+        destroyFlipbook();
+
         if (state.pdfDoc && typeof state.pdfDoc.destroy === "function") {
           state.pdfDoc.destroy().catch(() => {});
         }
@@ -1727,12 +1686,15 @@
 
     async function init() {
       try {
-        setupPdfJs();
+        setupLibraries();
         applyBranding();
         applySettingsFromQuery();
+
         state.pdfUrl = resolvePdfUrl();
+
         els.downloadBtn.href = state.pdfUrl;
         els.downloadBtn.download = safeFileNameFromUrl(state.pdfUrl);
+
         bindEvents();
         await loadFlipbook(0);
       } catch (error) {
