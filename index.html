@@ -329,6 +329,11 @@
       pointer-events: none;
     }
 
+    .btn.is-waiting:not(:disabled) {
+      opacity: 0.62;
+      cursor: wait;
+    }
+
     .btn.primary {
       background: linear-gradient(135deg, var(--brand), var(--brand-strong));
       color: #fff;
@@ -1408,8 +1413,15 @@
 
       els.prevBtn.disabled = atStart;
       els.firstBtn.disabled = atStart;
-      els.nextBtn.disabled = atEnd || state.forwardLocked;
-      els.lastBtn.disabled = atEnd || state.forwardLocked;
+      els.nextBtn.disabled = atEnd;
+      els.lastBtn.disabled = atEnd;
+
+      // Keep Next clickable while waiting. The click handler itself blocks the
+      // second forward move and can show useful loading feedback.
+      els.nextBtn.classList.toggle("is-waiting", state.forwardLocked && !atEnd);
+      els.lastBtn.classList.toggle("is-waiting", state.forwardLocked && !atEnd);
+      els.nextBtn.setAttribute("aria-busy", String(state.forwardLocked && !atEnd));
+      els.lastBtn.setAttribute("aria-busy", String(state.forwardLocked && !atEnd));
 
       // Slider is disabled in read mode or while we are intentionally waiting
       // on a newly-entered loading spread.
@@ -1690,6 +1702,7 @@
 
           end: function () {
             state.isTurning = false;
+            refreshNavigationAvailability();
           }
         }
       });
@@ -1779,6 +1792,16 @@
       }
     }
 
+    function isBookActuallyAnimating() {
+      if (!state.turnReady) return false;
+
+      try {
+        return !!window.jQuery(els.book).turn("animating");
+      } catch (_) {
+        return false;
+      }
+    }
+
     function prepareDirection(direction) {
       if (!state.turnReady) return;
 
@@ -1800,7 +1823,7 @@
     }
 
     function nextPage() {
-      if (!state.turnReady || !state.isReady || state.isTurning) return;
+      if (!state.turnReady || !state.isReady || isBookActuallyAnimating()) return;
 
       if (state.forwardLocked) {
         showSpreadLoadingStatus();
@@ -1808,27 +1831,51 @@
         return;
       }
 
-      // Always allow this one forward action immediately. If the destination
-      // spread is still rendering, the turning event will lock the next one.
+      // Always allow one forward action immediately. If the destination spread
+      // is still rendering, the turning event locks only the NEXT action.
       prepareDirection(1);
 
       try {
-        window.jQuery(els.book).turn("next");
-      } catch (_) {}
+        const $book = window.jQuery(els.book);
+        const view = $book.turn("view") || [];
+        const current = Number($book.turn("page")) || 1;
+        const lastVisible = Math.max.apply(
+          Math,
+          view.filter((page) => Number(page) > 0).map(Number).concat([current])
+        );
+        const target = Math.min(state.totalPages, lastVisible + 1);
+
+        if (target > current) {
+          $book.turn("page", target);
+        }
+      } catch (error) {
+        console.warn("Next page turn failed:", error);
+      }
     }
 
     function prevPage() {
-      if (!state.turnReady || !state.isReady || state.isTurning) return;
+      if (!state.turnReady || !state.isReady || isBookActuallyAnimating()) return;
 
       prepareDirection(-1);
 
       try {
-        window.jQuery(els.book).turn("previous");
-      } catch (_) {}
+        const $book = window.jQuery(els.book);
+        const view = $book.turn("view") || [];
+        const current = Number($book.turn("page")) || 1;
+        const valid = view.filter((page) => Number(page) > 0).map(Number);
+        const firstVisible = valid.length ? Math.min.apply(Math, valid) : current;
+        const target = Math.max(1, firstVisible - 1);
+
+        if (target < current) {
+          $book.turn("page", target);
+        }
+      } catch (error) {
+        console.warn("Previous page turn failed:", error);
+      }
     }
 
     function goToPage(index) {
-      if (!state.turnReady || !state.isReady || state.isTurning) return;
+      if (!state.turnReady || !state.isReady || isBookActuallyAnimating()) return;
 
       const safe = clamp(index, 0, state.totalPages - 1);
 
@@ -2063,7 +2110,7 @@
       });
 
       els.fitBtn.addEventListener("click", () => {
-        if (!state.isReady || !state.turnReady || state.isTurning) return;
+        if (!state.isReady || !state.turnReady || isBookActuallyAnimating()) return;
 
         state.fitMode = state.fitMode === "width" ? "height" : "width";
         els.fitBtn.setAttribute("aria-label",
@@ -2083,7 +2130,7 @@
       });
 
       els.qualityBtn.addEventListener("click", async () => {
-        if (!state.isReady || state.isTurning) return;
+        if (!state.isReady || isBookActuallyAnimating()) return;
 
         state.qualityMode =
           state.qualityMode === "ultra" ? "hd" : "ultra";
